@@ -1,0 +1,100 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { SlidersHorizontal, ChevronDown } from "lucide-react";
+
+export interface GridProduct {
+  id: string;
+  name: string;
+  price: string;
+  options?: string;
+  image: string;
+  alt: string;
+}
+
+export default function ProductGrid({ products }: { products: GridProduct[] }) {
+  return (
+    <>
+      {/* Filtering & Sort Bar */}
+      <section className="flex flex-col md:flex-row justify-between items-start md:items-center py-8 gap-6 mb-12 border-b border-[var(--color-outline-variant)]/30">
+        <div className="flex items-center gap-10">
+          <button className="flex items-center gap-2 font-sans text-xs uppercase tracking-widest text-[var(--color-on-surface)] hover:opacity-70 transition-opacity">
+            <span>Filter</span>
+            <SlidersHorizontal strokeWidth={1} size={16} />
+          </button>
+          <div className="hidden md:flex gap-8 text-xs uppercase tracking-widest text-[var(--color-secondary)]">
+            <button className="hover:text-[var(--color-on-surface)] transition-colors">Dresses</button>
+            <button className="hover:text-[var(--color-on-surface)] transition-colors">Knitwear</button>
+            <button className="hover:text-[var(--color-on-surface)] transition-colors">Outerwear</button>
+            <button className="hover:text-[var(--color-on-surface)] transition-colors">Tailoring</button>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="font-sans text-xs uppercase tracking-widest text-[var(--color-secondary)]">
+            Sort by:
+          </span>
+          <button className="flex items-center gap-2 font-sans text-xs uppercase tracking-widest text-[var(--color-on-surface)]">
+            <span>Newest</span>
+            <ChevronDown strokeWidth={1.5} size={16} />
+          </button>
+        </div>
+      </section>
+
+      {/* Product Grid */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-20 mb-40">
+        {products.map((product) => (
+          <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer block">
+            <div className="relative overflow-hidden bg-[var(--color-surface-low)] aspect-[3/4] mb-6">
+              <Image
+                src={product.image}
+                alt={product.alt}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              />
+              <div className="absolute bottom-6 left-6 right-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out z-10">
+                <button 
+                  className="w-full glass bg-white/80 py-4 font-sans text-xs uppercase tracking-widest text-[var(--color-on-surface)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
+                  onClick={(e) => { e.preventDefault(); console.log('Quick view', product.name); }}
+                >
+                  Quick View
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between items-start">
+                <h3 className="font-serif text-lg italic text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors">
+                  {product.name}
+                </h3>
+                <span className="font-sans text-sm font-medium">
+                  {product.price}
+                </span>
+              </div>
+              <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-[var(--color-secondary)]">
+                {product.options}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </section>
+
+      {/* Pagination */}
+      <section className="flex justify-center items-center gap-12 mb-40">
+        <button className="font-sans text-xs uppercase tracking-widest text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30">
+          Previous
+        </button>
+        <div className="flex gap-8 font-sans text-xs tracking-widest">
+          <button className="text-[var(--color-on-surface)] font-bold border-b border-[var(--color-on-surface)] pb-1">1</button>
+          <button className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors">2</button>
+          <button className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors">3</button>
+          <span className="text-[var(--color-secondary)]">...</span>
+          <button className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors">12</button>
+        </div>
+        <button className="font-sans text-xs uppercase tracking-widest text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors">
+          Next
+        </button>
+      </section>
+    </>
+  );
+}
