@@ -78,6 +78,22 @@ export interface Address {
   postalCode: string;
 }
 
+export interface Order {
+  id: string;
+  userId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature?: string;
+  items: CartItem[];
+  subtotal: number;
+  shipping: number;
+  total: number;
+  currency: string;
+  status: "paid" | "failed";
+  address?: Address | null;
+  createdAt: any; // Firestore Timestamp
+}
+
 // ── Data fetching functions ─────────────────────────────────────────────────
 
 export async function getNewArrivals(): Promise<Product[]> {
@@ -332,5 +348,77 @@ export async function getUserAddresses(): Promise<Address[]> {
   } catch (error) {
     console.error('Failed to fetch user addresses:', error);
     return [];
+  }
+}
+
+export async function getOrderById(orderId: string): Promise<Order | null> {
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    return null;
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session')?.value;
+    if (!sessionCookie) return null;
+
+    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const uid = decoded?.uid;
+    if (!uid) return null;
+
+    const docRef = adminDb.collection('orders').doc(orderId);
+    const doc = await docRef.get();
+    if (!doc.exists) return null;
+
+    const data = doc.data() as any;
+    if (data.userId !== uid) return null;
+
+    const items: CartItem[] = Array.isArray(data.items)
+      ? data.items.map((item: any) => ({
+          id: item.id ?? '',
+          name: item.name ?? '',
+          variant: item.variant ?? '',
+          size: item.size ?? '',
+          quantity: item.quantity ?? 1,
+          price: item.price ?? '',
+          rawPrice: item.rawPrice ?? 0,
+          image: item.image ?? '',
+          alt: item.alt ?? '',
+        }))
+      : [];
+
+    const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
+    const shipping = 0;
+    const total = data.amount ? Number(data.amount) / 100 : subtotal + shipping;
+
+    const address: Address | null = data.address
+      ? {
+          id: data.address.id ?? 'address',
+          fullName: data.address.fullName ?? '',
+          phone: data.address.phone ?? '',
+          streetAddress: data.address.streetAddress ?? '',
+          city: data.address.city ?? '',
+          state: data.address.state ?? '',
+          postalCode: data.address.postalCode ?? '',
+        }
+      : null;
+
+    return {
+      id: doc.id,
+      userId: data.userId,
+      razorpayOrderId: data.razorpayOrderId,
+      razorpayPaymentId: data.razorpayPaymentId,
+      razorpaySignature: data.razorpaySignature,
+      items,
+      subtotal,
+      shipping,
+      total,
+      currency: data.currency ?? 'INR',
+      status: data.status ?? 'paid',
+      address,
+      createdAt: data.createdAt,
+    };
+  } catch (error) {
+    console.error('Failed to fetch order:', error);
+    return null;
   }
 }
