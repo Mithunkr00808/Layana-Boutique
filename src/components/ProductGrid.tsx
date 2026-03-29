@@ -18,10 +18,12 @@ export default function ProductGrid({
   products,
   activeCategory,
   activeSize,
+  activeQuery,
 }: {
   products: GridProduct[];
   activeCategory?: string | null;
   activeSize?: string | null;
+  activeQuery?: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +73,15 @@ export default function ProductGrid({
               <option value="m">M</option>
               <option value="l">L</option>
             </select>
+          </div>
+          <div className="flex-1 max-w-xs">
+            <input
+              type="search"
+              placeholder="Search fabrics, styles, pieces"
+              defaultValue={activeQuery || ""}
+              onChange={(e) => setParam("q", e.target.value || null)}
+              className="w-full border-b border-[var(--color-outline-variant)]/50 bg-transparent py-2 text-sm font-sans text-[var(--color-on-surface)] placeholder:text-[var(--color-secondary)] focus:outline-none"
+            />
           </div>
         </div>
         <div className="flex items-center gap-4">

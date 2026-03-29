@@ -22,7 +22,7 @@ export default async function ReadyToWearPage({
     query: searchParams?.q || null,
   };
 
-  const products = await getReadyToWearProducts({ category: filters.category, size: filters.size });
+  const products = await getReadyToWearProducts({ category: filters.category, size: filters.size, query: filters.query });
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -40,7 +40,12 @@ export default async function ReadyToWearPage({
           </header>
         </FadeIn>
 
-        <ProductGrid products={products} activeCategory={filters.category} activeSize={filters.size} />
+        <ProductGrid
+          products={products}
+          activeCategory={filters.category}
+          activeSize={filters.size}
+          activeQuery={filters.query}
+        />
       </main>
       <Footer />
     </div>

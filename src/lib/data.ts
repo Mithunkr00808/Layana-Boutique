@@ -116,7 +116,7 @@ export async function getNewArrivals(): Promise<Product[]> {
   }
 }
 
-export async function getReadyToWearProducts(filters?: { category?: string | null; size?: string | null }): Promise<Product[]> {
+export async function getReadyToWearProducts(filters?: { category?: string | null; size?: string | null; query?: string | null }): Promise<Product[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
     return readyToWearProducts.filter((p) => {
       const categoryValue = (p as any).category ? String((p as any).category) : '';
@@ -125,7 +125,12 @@ export async function getReadyToWearProducts(filters?: { category?: string | nul
         ? (p.options || '').toLowerCase().includes(filters.size.toLowerCase()) ||
           categoryValue.toLowerCase().includes(filters.size.toLowerCase())
         : true;
-      return categoryOk && sizeOk;
+      const queryOk = filters?.query
+        ? [p.name, p.options, categoryValue].some((field) =>
+            (field || '').toLowerCase().includes(filters.query!.toLowerCase())
+          )
+        : true;
+      return categoryOk && sizeOk && queryOk;
     });
   }
 
@@ -145,6 +150,13 @@ export async function getReadyToWearProducts(filters?: { category?: string | nul
     if (filters?.size) {
       const sizeLower = filters.size.toLowerCase();
       return products.filter((p) => (p.options || '').toLowerCase().includes(sizeLower));
+    }
+
+    if (filters?.query) {
+      const q = filters.query.toLowerCase();
+      return products.filter((p) =>
+        [p.name, p.options, (p as any).category || ""].some((field) => (field || "").toLowerCase().includes(q))
+      );
     }
 
     return products;
