@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export interface GridProduct {
   id: string;
@@ -27,6 +28,7 @@ export default function ProductGrid({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [searchText, setSearchText] = useState(activeQuery || "");
 
   const setParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -37,6 +39,16 @@ export default function ProductGrid({
     }
     router.push(`/ready-to-wear?${params.toString()}`);
   };
+
+  // Debounce search updates to avoid chatty router pushes
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const value = searchText.trim();
+      setParam("q", value ? value : null);
+    }, 300);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText]);
 
   return (
     <>
@@ -78,8 +90,8 @@ export default function ProductGrid({
             <input
               type="search"
               placeholder="Search fabrics, styles, pieces"
-              defaultValue={activeQuery || ""}
-              onChange={(e) => setParam("q", e.target.value || null)}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
               className="w-full border-b border-[var(--color-outline-variant)]/50 bg-transparent py-2 text-sm font-sans text-[var(--color-on-surface)] placeholder:text-[var(--color-secondary)] focus:outline-none"
             />
           </div>
