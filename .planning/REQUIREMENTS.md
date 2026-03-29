@@ -16,7 +16,7 @@
 - [x] **CHK-01**: Users can enter a shipping address and be redirected directly to a Razorpay gateway.
 - [x] **CHK-02**: Backend Server Action compiles correct Subtotals dynamically from Firestore rules (un-fakable).
 - [x] **CHK-03**: Backend securely verifies the Razorpay payment signature from successful callback response data.
-- [ ] **CHK-04**: An order confirmation email/SMS receipt is triggered post-purchase (optional depending on Razorpay setup).
+- [x] **CHK-04**: An order confirmation email/SMS receipt is triggered post-purchase (optional depending on Razorpay setup).
 
 ### Admin Panel
 - [ ] **ADM-01**: Added "Order History" view to the backend admin dashboard to inspect verified purchases.
