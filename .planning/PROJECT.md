@@ -1,39 +1,42 @@
 # Layana Boutique 2.0: Commerce & Accounts
 
 ## Context
-**What This Is:** A massive expansion to the Layana Boutique architecture. Evolving the platform from a static-like brochure with a cart into a fully functional, self-serving e-commerce engine with authenticated users, secure payments, search features, and a scalable admin panel.
+**What This Is:** A fully functional, authenticated e-commerce experience for Layana Boutique: Firebase Auth-backed accounts with wishlists/addresses, Razorpay checkout with server-verified totals, order visibility for customers and admins, admin image uploads to Firebase Storage, and storefront filtering/search.
 
-**Why It Matters (Core Value):** Customers need a secure way to actually purchase items (Razorpay) while retaining a personalized experience (Accounts & Wishlists). Administrators need true independence from the codebase, requiring native image uploads (Firebase Storage) rather than static URLs.
+**Why It Matters (Core Value):** Customers can complete secure purchases with Razorpay while enjoying personalized accounts; administrators can manage catalog media without developer intervention and shoppers can find products quickly via filters/search.
 
 ## Requirements
 
-### Validated
-- ✓ **Product Catalog Engine** — Live catalog pulling from `products` and `productDetails` Firestore collections with safe hydrations.
-- ✓ **Interactive Cart** — Real-time synced cart additions using Next.js Server Actions.
-- ✓ **Admin Catalog UI** — A secure backend to manage product documents and text data.
-- ✓ **SEC-01**: User Authentication (Login, Signup) tracking session state globally. *(Validated in Phase 1)*
-- ✓ **ACC-01**: User Accounts Dashboard (Saved shipping addresses, Wishlist management). *(Validated in Phase 1)*
+### Validated (v1.0)
+- ✓ **AUTH-01/02/03** — Email/password auth with SSR session persistence and secure logout.
+- ✓ **ACC-01/02/03** — Orders page, saved addresses, wishlists tied to UID.
+- ✓ **CHK-01/02/03/04** — Razorpay checkout, server recompute, HMAC verification, confirmation page/receipt hook.
+- ✓ **ADM-01/02** — Admin orders view plus Firebase Storage image uploads.
+- ✓ **CAT-01/02** — Category/size filtering and keyword search.
+- ✓ **Product Catalog Engine** — Firestore-backed catalog with safe hydrations.
+- ✓ **Interactive Cart** — Server Action-driven cart with INR pricing.
+- ✓ **Admin Catalog UI** — Manage product docs/text data.
 
-### Active
-- [ ] **CHK-01**: Razorpay Checkout Integration securely processing payments.
-- [ ] **ORD-01**: Post-checkout Order Confirmation and user email receipts.
-- [ ] **ADM-01**: Order management listing in the existing Admin Panel.
-- [ ] **ADM-02**: Native Firebase Storage integration on the Admin `ProductForm` to upload real images instead of external URLs.
-- [ ] **CAT-01**: Advanced storefront filtering (categories, size, price hooks) and direct text searching.
+### Active (next milestones)
+- [ ] **V2-01**: Guest Checkouts (Unauthenticated flow)
+- [ ] **V2-02**: Cart abandoned email campaigns.
+- [ ] **V2-03**: Apple Pay / Direct Wallet Integrations outside Razorpay standard flow.
 
 ### Out of Scope
-- [ ] Multiple currency support (Sticking to INR/Razorpay native standard for V1)
-- [ ] Automated shipping carrier integrations (e.g. FedEx/DHL) — flat rate/free shipping logic only for now.
+- [ ] Multiple currency support (sticking to INR/Razorpay native standard for V1).
+- [ ] Automated shipping carrier integrations (flat rate shipping only for now).
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Razorpay Gateway | Specifically chosen by stakeholder for regional payment flow | — Pending |
-| Firebase Storage | Already deep into the Firebase ecosystem (Firestore), provides seamless native integration without AWS buckets | — Pending |
+| Razorpay Gateway | Stakeholder-required regional payment flow | ✓ Good |
+| Firebase Storage | Keep media within Firebase ecosystem for simplicity and auth alignment | ✓ Good |
+| Dynamic render for auth-dependent routes | Enables `cookies()` access on cart/checkout/confirmation | ✓ Good |
+| Server-side price recompute before payment | Prevents client tampering and ensures Razorpay charge accuracy | ✓ Good |
 
 ---
-*Last updated: Today after initialization*
+*Last updated: 2026-03-29 after v1.0 milestone*
 
 ## Evolution
 This document evolves at phase transitions and milestone boundaries.
