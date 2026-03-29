@@ -68,6 +68,16 @@ export interface CartItem {
   alt: string;
 }
 
+export interface Address {
+  id: string;
+  fullName: string;
+  phone: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  postalCode: string;
+}
+
 // ── Data fetching functions ─────────────────────────────────────────────────
 
 export async function getNewArrivals(): Promise<Product[]> {
@@ -267,5 +277,60 @@ export async function getCartItemsForUser(): Promise<CartItem[]> {
   } catch (error) {
     console.error('Failed to verify session or fetch user cart, falling back to mock data:', error);
     return cartItemsMock;
+  }
+}
+
+export async function getUserAddresses(): Promise<Address[]> {
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    return [];
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session')?.value;
+    if (!sessionCookie) return [];
+
+    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const uid = decoded?.uid;
+    if (!uid) return [];
+
+    const userRef = adminDb.collection('users').doc(uid);
+    const [userDoc, addressDocs] = await Promise.all([
+      userRef.get(),
+      userRef.collection('addresses').get().catch(() => null),
+    ]);
+
+    if (addressDocs && !addressDocs.empty) {
+      return addressDocs.docs.map((doc) => {
+        const data = doc.data() as Partial<Address>;
+        return {
+          id: data.id ?? doc.id,
+          fullName: data.fullName ?? '',
+          phone: data.phone ?? '',
+          streetAddress: data.streetAddress ?? '',
+          city: data.city ?? '',
+          state: data.state ?? '',
+          postalCode: data.postalCode ?? '',
+        };
+      });
+    }
+
+    const userData = userDoc.data();
+    if (userData && Array.isArray(userData.addresses)) {
+      return (userData.addresses as Partial<Address>[]).map((addr, idx) => ({
+        id: addr.id ?? `addr-${idx}`,
+        fullName: addr.fullName ?? '',
+        phone: addr.phone ?? '',
+        streetAddress: addr.streetAddress ?? '',
+        city: addr.city ?? '',
+        state: addr.state ?? '',
+        postalCode: addr.postalCode ?? '',
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Failed to fetch user addresses:', error);
+    return [];
   }
 }
