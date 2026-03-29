@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -18,6 +18,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,7 +36,8 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      router.push("/account");
+      const redirectTo = searchParams.get("returnUrl") || searchParams.get("callbackUrl") || "/account";
+      router.push(redirectTo);
     } catch (err: any) {
       console.error(err);
       setError("Invalid email or password. Please try again.");

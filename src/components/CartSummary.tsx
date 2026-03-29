@@ -2,11 +2,13 @@
 
 import { CreditCard, Building2, Smartphone } from "lucide-react";
 import { CartItemType } from "./CartItems";
+import { useRouter } from "next/navigation";
 
 export default function CartSummary({ items }: { items: CartItemType[] }) {
   const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
   const formatInr = (value: number) =>
     `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const router = useRouter();
 
   return (
     <div className="lg:col-span-4">
@@ -31,7 +33,11 @@ export default function CartSummary({ items }: { items: CartItemType[] }) {
             <span className="font-serif text-2xl text-[var(--color-on-surface)]">{formatInr(subtotal)}</span>
           </div>
 
-          <button className="w-full py-5 bg-[var(--color-primary)] text-white font-sans text-xs tracking-[0.2em] uppercase transition-all active:scale-[0.98] hover:opacity-90">
+          <button
+            onClick={() => router.push("/checkout")}
+            disabled={items.length === 0}
+            className="w-full py-5 bg-[var(--color-primary)] text-white font-sans text-xs tracking-[0.2em] uppercase transition-all active:scale-[0.98] hover:opacity-90 disabled:opacity-50"
+          >
             Proceed to Checkout
           </button>
 
