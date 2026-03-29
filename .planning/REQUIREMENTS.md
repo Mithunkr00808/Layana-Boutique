@@ -20,7 +20,7 @@
 
 ### Admin Panel
 - [x] **ADM-01**: Added "Order History" view to the backend admin dashboard to inspect verified purchases.
-- [ ] **ADM-02**: The `ProductForm` utilizes a `<input type="file" />` that streams directly to a Firebase Storage bucket, natively returning an HTTPS img URL to store inside `productDetails`.
+- [x] **ADM-02**: The `ProductForm` utilizes a `<input type="file" />` that streams directly to a Firebase Storage bucket, natively returning an HTTPS img URL to store inside `productDetails`.
 
 ### Catalog & Search
 - [ ] **CAT-01**: Filtering capability by native properties (Category, Size).
