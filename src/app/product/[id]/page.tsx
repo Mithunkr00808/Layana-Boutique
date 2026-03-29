@@ -22,6 +22,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   
   const product = await getProductDetail(id);
   const related = await getRelatedProducts();
+  const primaryImage = product.images?.[0]?.src || "";
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -29,7 +30,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       <main className="flex-grow max-w-[1440px] mx-auto px-10 w-full pt-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-20">
           <ProductGallery images={product.images} />
-          <ProductDetails {...product} />
+          <ProductDetails {...product} id={product.id} primaryImage={primaryImage} />
         </div>
         <RelatedProducts products={related} />
       </main>

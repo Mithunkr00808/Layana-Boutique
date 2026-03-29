@@ -310,21 +310,66 @@ export async function getCartItemsForUser(): Promise<CartItem[]> {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session')?.value;
-    if (!sessionCookie) {
-      return cartItemsMock;
+    const guestId = cookieStore.get('guestId')?.value;
+
+    async function mergeGuestToUser(uid: string, guest: string) {
+      const guestSnap = await adminDb
+        .collection('guest-carts')
+        .doc(guest)
+        .collection('items')
+        .get();
+
+      if (guestSnap.empty) return;
+
+      await adminDb.runTransaction(async (txn) => {
+        for (const doc of guestSnap.docs) {
+          const data = doc.data() as any;
+          const targetRef = adminDb.collection('users').doc(uid).collection('cart').doc(doc.id);
+          const existing = await txn.get(targetRef);
+          const existingQty = (existing.exists ? (existing.data()?.quantity as number | undefined) : 0) ?? 0;
+          txn.set(
+            targetRef,
+            {
+              ...data,
+              quantity: Math.max(1, existingQty + ((data.quantity as number) ?? 1)),
+            },
+            { merge: true }
+          );
+        }
+      });
+
+      const batch = adminDb.batch();
+      guestSnap.docs.forEach((d) => batch.delete(d.ref));
+      batch.delete(adminDb.collection('guest-carts').doc(guest));
+      await batch.commit();
     }
 
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const uid = decoded?.uid;
-
-    if (!uid) {
-      return cartItemsMock;
+    if (sessionCookie) {
+      const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+      const uid = decoded?.uid;
+      if (uid) {
+        if (guestId) {
+          await mergeGuestToUser(uid, guestId);
+        }
+        return await getCartItems(uid);
+      }
     }
 
-    return await getCartItems(uid);
+    // Fallback to guest cart
+    if (!guestId) return [];
+
+    const snapshot = await adminDb
+      .collection('guest-carts')
+      .doc(guestId)
+      .collection('items')
+      .get();
+
+    if (snapshot.empty) return [];
+
+    return snapshot.docs.map(mapCartDoc);
   } catch (error) {
-    console.error('Failed to verify session or fetch user cart, falling back to mock data:', error);
-    return cartItemsMock;
+    console.error('Failed to verify session or fetch cart:', error);
+    return [];
   }
 }
 

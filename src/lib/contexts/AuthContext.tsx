@@ -40,6 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               'Content-Type': 'application/json',
             },
           });
+
+          // Migrate any guest cart to this user
+          await fetch('/api/cart/migrate', { method: 'POST' });
         } catch (error) {
           console.error("Failed to sync session cookie:", error);
         }

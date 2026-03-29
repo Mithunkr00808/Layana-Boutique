@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -19,6 +20,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, loading } = useAuth();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,14 +32,49 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const redirectTarget = useMemo(() => {
+    const paramTarget =
+      searchParams.get("returnUrl") || searchParams.get("callbackUrl");
+    if (paramTarget) return paramTarget;
+    if (typeof window !== "undefined") {
+      try {
+        const ref = new URL(document.referrer);
+        if (ref.origin === window.location.origin) {
+          return `${ref.pathname}${ref.search}`;
+        }
+      } catch (e) {
+        // ignore parsing errors
+      }
+    }
+    return "/account";
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace(redirectTarget);
+    }
+  }, [user, loading, router, redirectTarget]);
+
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     setError("");
 
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      const redirectTo = searchParams.get("returnUrl") || searchParams.get("callbackUrl") || "/account";
-      router.push(redirectTo);
+      const credential = await signInWithEmailAndPassword(auth, data.email, data.password);
+
+      // Create session cookie for server-side middleware
+      const idToken = await credential.user.getIdToken(true);
+      const sessionRes = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!sessionRes.ok) {
+        throw new Error("Failed to create session cookie");
+      }
+
+      router.push(redirectTarget);
     } catch (err: any) {
       console.error(err);
       setError("Invalid email or password. Please try again.");

@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { Heart, ShoppingBag, Menu, User as UserIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const { user } = useAuth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const currentPath = useMemo(() => {
+    const search = searchParams.toString();
+    return search ? `${pathname}?${search}` : pathname;
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,7 +48,15 @@ export default function Navbar() {
           <Link href="/account/wishlist" className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95" aria-label="Favorites">
             <Heart strokeWidth={1.5} size={24} />
           </Link>
-          <Link href={user ? "/account" : "/login"} className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95" aria-label="Account">
+          <Link
+            href={
+              user
+                ? "/account"
+                : `/login?returnUrl=${encodeURIComponent(currentPath)}`
+            }
+            className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95"
+            aria-label="Account"
+          >
             <UserIcon strokeWidth={1.5} size={24} />
           </Link>
           <Link href="/cart" className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95" aria-label="Shopping Bag">

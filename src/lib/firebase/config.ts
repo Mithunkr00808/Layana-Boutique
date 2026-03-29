@@ -11,6 +11,11 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Validation: Warn if key configuration is missing in the browser environment
+if (typeof window !== "undefined" && !firebaseConfig.apiKey) {
+  console.error("Firebase Configuration Error: NEXT_PUBLIC_FIREBASE_API_KEY is missing. Check your .env.local file and restart the dev server.");
+}
+
 // Initialize Firebase only if it hasn't been initialized already
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);

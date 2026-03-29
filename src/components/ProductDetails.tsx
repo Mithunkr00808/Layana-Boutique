@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { ChevronDown, Store } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { addCartItem } from "@/app/cart/actions";
 
 interface SizeProps {
   label: string;
@@ -9,6 +11,7 @@ interface SizeProps {
 }
 
 interface ProductDetailsProps {
+  id: string;
   sku: string;
   categoryPath: string;
   name: string;
@@ -17,10 +20,56 @@ interface ProductDetailsProps {
   materials: string[];
   sustainability: string;
   sizes: SizeProps[];
+  primaryImage?: string;
 }
 
 export default function ProductDetails(props: ProductDetailsProps) {
-  const [selectedSize, setSelectedSize] = useState<string | null>("FR 38"); // Default selection based on mock
+  const initialSize = useMemo(
+    () => props.sizes.find((s) => s.available)?.label || props.sizes[0]?.label || null,
+    [props.sizes]
+  );
+  const [selectedSize, setSelectedSize] = useState<string | null>(initialSize);
+  const [isPending, startTransition] = useTransition();
+  const [message, setMessage] = useState<string>("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const currentPath = useMemo(() => {
+    const search = searchParams.toString();
+    return search ? `${pathname}?${search}` : pathname;
+  }, [pathname, searchParams]);
+
+  const numericPrice = useMemo(() => {
+    const numeric = parseFloat((props.price || "").replace(/[^\d.]/g, ""));
+    return Number.isFinite(numeric) ? numeric : 0;
+  }, [props.price]);
+
+  const priceDisplay = useMemo(
+    () => `₹${numericPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    [numericPrice]
+  );
+
+  const handleAddToCart = () => {
+    setMessage("");
+    startTransition(async () => {
+      const result = await addCartItem({
+        productId: props.id,
+        name: props.name,
+        variant: props.categoryPath,
+        size: selectedSize || "",
+        price: numericPrice,
+        priceDisplay,
+        image: props.primaryImage || "",
+        alt: props.name,
+      });
+
+      if (!result.ok) {
+        setMessage("Could not add to bag. Please try again.");
+      } else {
+          setMessage("Added to bag");
+      }
+    });
+  };
 
   return (
     <div className="md:col-span-5 relative">
@@ -99,13 +148,20 @@ export default function ProductDetails(props: ProductDetailsProps) {
 
         {/* CTA */}
         <div className="pt-6 space-y-4">
-          <button className="w-full bg-[var(--color-primary)] text-[var(--color-on-primary)] py-5 rounded-sm font-sans text-xs uppercase tracking-widest transition-all active:scale-[0.99] hover:opacity-90">
-            Add to Bag
+          <button
+            onClick={handleAddToCart}
+            disabled={isPending || !numericPrice}
+            className="w-full bg-[var(--color-primary)] text-[var(--color-on-primary)] py-5 rounded-sm font-sans text-xs uppercase tracking-widest transition-all active:scale-[0.99] hover:opacity-90 disabled:opacity-50"
+          >
+            {isPending ? "Adding..." : "Add to Bag"}
           </button>
           <button className="w-full flex items-center justify-center gap-2 py-5 border border-[var(--color-outline-variant)]/30 font-sans text-xs uppercase tracking-widest hover:bg-[var(--color-surface-container-high)] transition-colors">
             <Store strokeWidth={1.5} size={18} />
             Find in Store
           </button>
+          {message && (
+            <p className="text-xs text-[var(--color-secondary)] font-sans">{message}</p>
+          )}
         </div>
         <p className="text-[10px] text-center text-[var(--color-on-surface-variant)] font-sans tracking-widest uppercase">
           Free complimentary shipping and returns on all orders

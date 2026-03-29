@@ -18,6 +18,15 @@ async function getUidFromSession(): Promise<string | null> {
   }
 }
 
+async function getGuestId(): Promise<string> {
+  const cookieStore = await cookies();
+  const existing = cookieStore.get("guestId")?.value;
+  if (existing) return existing;
+  const id = crypto.randomUUID();
+  cookieStore.set("guestId", id, { path: "/", httpOnly: true });
+  return id;
+}
+
 export async function updateCartItemQuantity(id: string, newQuantity: number) {
   if (!process.env.FIREBASE_PROJECT_ID) {
     console.warn("No FIREBASE_PROJECT_ID found. Cannot update quantity in Firebase.");
@@ -30,11 +39,14 @@ export async function updateCartItemQuantity(id: string, newQuantity: number) {
 
   try {
     const uid = await getUidFromSession();
-    if (!uid) {
-      return false;
+    let docRef;
+    if (uid) {
+      docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
+    } else {
+      const guestId = await getGuestId();
+      docRef = adminDb.collection("guest-carts").doc(guestId).collection("items").doc(id);
     }
 
-    const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
     await docRef.update({
       quantity: newQuantity,
     });
@@ -55,9 +67,14 @@ export async function removeCartItem(id: string) {
 
   try {
     const uid = await getUidFromSession();
-    if (!uid) return false;
+    let docRef;
+    if (uid) {
+      docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
+    } else {
+      const guestId = await getGuestId();
+      docRef = adminDb.collection("guest-carts").doc(guestId).collection("items").doc(id);
+    }
 
-    const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
     await docRef.delete();
 
     revalidatePath("/cart");
@@ -65,6 +82,59 @@ export async function removeCartItem(id: string) {
   } catch (error) {
     console.error("Error removing cart item:", error);
     return false;
+  }
+}
+
+export async function addCartItem(input: {
+  productId: string;
+  name: string;
+  variant?: string;
+  size?: string;
+  price: number;
+  priceDisplay?: string;
+  image?: string;
+  alt?: string;
+}) {
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    console.warn("No FIREBASE_PROJECT_ID found. Cannot add cart item.");
+    return { ok: false, reason: "env" as const };
+  }
+
+  try {
+    const uid = await getUidFromSession();
+    const guestId = uid ? null : await getGuestId();
+
+    const cartCollection = uid
+      ? adminDb.collection("users").doc(uid).collection("cart")
+      : adminDb.collection("guest-carts").doc(guestId as string).collection("items");
+
+    const docId = `${input.productId}-${input.size || "onesize"}`;
+    const docRef = cartCollection.doc(docId);
+
+    const existingSnap = await docRef.get();
+    const existingQty = existingSnap.exists ? (existingSnap.data()?.quantity as number | undefined) ?? 0 : 0;
+
+    await docRef.set(
+      {
+        id: docId,
+        productId: input.productId,
+        name: input.name,
+        variant: input.variant || "",
+        size: input.size || "",
+        quantity: Math.max(1, existingQty + 1),
+        price: input.priceDisplay || `₹${input.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+        rawPrice: input.price,
+        image: input.image || "",
+        alt: input.alt || input.name,
+      },
+      { merge: true }
+    );
+
+    revalidatePath("/cart");
+    return { ok: true };
+  } catch (error) {
+    console.error("Error adding cart item:", error);
+    return { ok: false, reason: "error" as const };
   }
 }
 

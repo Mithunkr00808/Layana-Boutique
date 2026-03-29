@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { auth, db } from "@/lib/firebase/config";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 
 const signupSchema = z.object({
   firstName: z.string().min(2, "First name is strictly required"),
@@ -43,7 +43,7 @@ export default function SignupPage() {
         data.password
       );
       
-      const db = getFirestore();
+      // Using the pre-initialized db from our config
       
       // Create user profile in Firestore
       await setDoc(doc(db, "users", userCredential.user.uid), {
@@ -52,6 +52,18 @@ export default function SignupPage() {
         email: data.email,
         createdAt: new Date().toISOString(),
       });
+
+      // Create session cookie for server-side middleware
+      const idToken = await userCredential.user.getIdToken(true);
+      const sessionRes = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!sessionRes.ok) {
+        throw new Error("Failed to create session cookie");
+      }
 
       router.push("/account");
     } catch (err: any) {
