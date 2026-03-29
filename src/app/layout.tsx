@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Serif, Manrope } from "next/font/google";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
 import "./globals.css";
 
 const notoSerif = Noto_Serif({
@@ -43,7 +44,9 @@ export default function RootLayout({
       lang="en"
       className={`${notoSerif.variable} ${manrope.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

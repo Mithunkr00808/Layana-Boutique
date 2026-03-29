@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartItems from "@/components/CartItems";
 import CartSummary from "@/components/CartSummary";
-import { cartItemsMock } from "@/data/mockData";
+import { getCartItems } from "@/lib/data";
 
 import type { Metadata } from "next";
 
@@ -11,10 +11,8 @@ export const metadata: Metadata = {
   description: "Explore the items currently curated in your selection.",
 };
 
-export default function CartPage() {
-  // In a future step when user authentication is active,
-  // we would fetch the user's specific cart from Firestore here.
-  const activeCart = cartItemsMock;
+export default async function CartPage() {
+  const activeCart = await getCartItems();
 
   return (
     <div className="flex flex-col min-h-screen">

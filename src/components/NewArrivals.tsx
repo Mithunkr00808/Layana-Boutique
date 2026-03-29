@@ -28,7 +28,7 @@ export default function NewArrivals({ products }: { products: ProductSummary[] }
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
         {products.map((product) => (
-          <div key={product.id} className="group cursor-pointer">
+          <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer block">
             <div className="aspect-[3/4] overflow-hidden bg-[var(--color-surface-low)] mb-6 relative">
               <Image
                 src={product.image}
@@ -54,7 +54,7 @@ export default function NewArrivals({ products }: { products: ProductSummary[] }
                 {product.price}
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>

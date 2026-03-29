@@ -1,0 +1,220 @@
+
+> layana-boutique@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.2.1 (Turbopack)
+- Environments: .env.local
+
+ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 8 errors:
+./src/app/(auth)/forgot-password/page.tsx:9:1
+Module not found: Can't resolve '@hookform/resolvers/zod'
+   7 | import { z } from "zod";
+   8 | import { useForm } from "react-hook-form";
+>  9 | import { zodResolver } from "@hookform/resolvers/zod";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  10 |
+  11 | const forgotSchema = z.object({
+  12 |   email: z.string().email("Invalid email address"),
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(auth)/forgot-password/page.tsx [Client Component Browser]
+    ./src/app/(auth)/forgot-password/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(auth)/forgot-password/page.tsx [Client Component SSR]
+    ./src/app/(auth)/forgot-password/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/(auth)/login/page.tsx:10:1
+Module not found: Can't resolve '@hookform/resolvers/zod'
+   8 | import { z } from "zod";
+   9 | import { useForm } from "react-hook-form";
+> 10 | import { zodResolver } from "@hookform/resolvers/zod";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 |
+  12 | const loginSchema = z.object({
+  13 |   email: z.string().email("Invalid email address"),
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(auth)/login/page.tsx [Client Component Browser]
+    ./src/app/(auth)/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(auth)/login/page.tsx [Client Component SSR]
+    ./src/app/(auth)/login/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/(auth)/signup/page.tsx:10:1
+Module not found: Can't resolve '@hookform/resolvers/zod'
+   8 | import { z } from "zod";
+   9 | import { useForm } from "react-hook-form";
+> 10 | import { zodResolver } from "@hookform/resolvers/zod";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { getFirestore, doc, setDoc } from "firebase/firestore";
+  12 |
+  13 | const signupSchema = z.object({
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(auth)/signup/page.tsx [Client Component Browser]
+    ./src/app/(auth)/signup/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(auth)/signup/page.tsx [Client Component SSR]
+    ./src/app/(auth)/signup/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/account/addresses/page.tsx:11:1
+Module not found: Can't resolve '@hookform/resolvers/zod'
+   9 | import { z } from "zod";
+  10 | import { useForm } from "react-hook-form";
+> 11 | import { zodResolver } from "@hookform/resolvers/zod";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  12 |
+  13 | const addressSchema = z.object({
+  14 |   fullName: z.string().min(2, "Name is required"),
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/account/addresses/page.tsx [Client Component Browser]
+    ./src/app/account/addresses/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/account/addresses/page.tsx [Client Component SSR]
+    ./src/app/account/addresses/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/(auth)/forgot-password/page.tsx:8:1
+Module not found: Can't resolve 'react-hook-form'
+   6 | import Link from "next/link";
+   7 | import { z } from "zod";
+>  8 | import { useForm } from "react-hook-form";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 | import { zodResolver } from "@hookform/resolvers/zod";
+  10 |
+  11 | const forgotSchema = z.object({
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(auth)/forgot-password/page.tsx [Client Component Browser]
+    ./src/app/(auth)/forgot-password/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(auth)/forgot-password/page.tsx [Client Component SSR]
+    ./src/app/(auth)/forgot-password/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/(auth)/login/page.tsx:9:1
+Module not found: Can't resolve 'react-hook-form'
+   7 | import Link from "next/link";
+   8 | import { z } from "zod";
+>  9 | import { useForm } from "react-hook-form";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import { zodResolver } from "@hookform/resolvers/zod";
+  11 |
+  12 | const loginSchema = z.object({
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(auth)/login/page.tsx [Client Component Browser]
+    ./src/app/(auth)/login/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(auth)/login/page.tsx [Client Component SSR]
+    ./src/app/(auth)/login/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/(auth)/signup/page.tsx:9:1
+Module not found: Can't resolve 'react-hook-form'
+   7 | import Link from "next/link";
+   8 | import { z } from "zod";
+>  9 | import { useForm } from "react-hook-form";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import { zodResolver } from "@hookform/resolvers/zod";
+  11 | import { getFirestore, doc, setDoc } from "firebase/firestore";
+  12 |
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/(auth)/signup/page.tsx [Client Component Browser]
+    ./src/app/(auth)/signup/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/(auth)/signup/page.tsx [Client Component SSR]
+    ./src/app/(auth)/signup/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./src/app/account/addresses/page.tsx:10:1
+Module not found: Can't resolve 'react-hook-form'
+   8 | import { ArrowLeft, Plus, MapPin, Trash2 } from "lucide-react";
+   9 | import { z } from "zod";
+> 10 | import { useForm } from "react-hook-form";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  11 | import { zodResolver } from "@hookform/resolvers/zod";
+  12 |
+  13 | const addressSchema = z.object({
+
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/account/addresses/page.tsx [Client Component Browser]
+    ./src/app/account/addresses/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/account/addresses/page.tsx [Client Component SSR]
+    ./src/app/account/addresses/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./src/app/(auth)/forgot-password/page.tsx:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/(auth)/login/page.tsx:10:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/(auth)/signup/page.tsx:10:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/account/addresses/page.tsx:11:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/(auth)/forgot-password/page.tsx:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/(auth)/login/page.tsx:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/(auth)/signup/page.tsx:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./src/app/account/addresses/page.tsx:10:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
