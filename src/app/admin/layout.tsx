@@ -11,6 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
           <nav className="flex gap-6 font-sans text-xs tracking-widest uppercase text-gray-500 font-semibold">
             <Link href="/admin/catalog" className="hover:text-black transition-colors">Catalog</Link>
+            <Link href="/admin/orders" className="hover:text-black transition-colors">Orders</Link>
             <Link href="/" className="hover:text-black transition-colors" target="_blank">Storefront</Link>
           </nav>
         </div>
