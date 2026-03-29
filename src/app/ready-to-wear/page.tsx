@@ -11,8 +11,18 @@ export const metadata: Metadata = {
   description: "A curated selection of archival silhouettes and modern essentialism.",
 };
 
-export default async function ReadyToWearPage() {
-  const products = await getReadyToWearProducts();
+export default async function ReadyToWearPage({
+  searchParams,
+}: {
+  searchParams?: { category?: string; size?: string; q?: string };
+}) {
+  const filters = {
+    category: searchParams?.category || null,
+    size: searchParams?.size || null,
+    query: searchParams?.q || null,
+  };
+
+  const products = await getReadyToWearProducts({ category: filters.category, size: filters.size });
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -30,7 +40,7 @@ export default async function ReadyToWearPage() {
           </header>
         </FadeIn>
 
-        <ProductGrid products={products} />
+        <ProductGrid products={products} activeCategory={filters.category} activeSize={filters.size} />
       </main>
       <Footer />
     </div>

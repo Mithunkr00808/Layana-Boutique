@@ -116,19 +116,38 @@ export async function getNewArrivals(): Promise<Product[]> {
   }
 }
 
-export async function getReadyToWearProducts(): Promise<Product[]> {
+export async function getReadyToWearProducts(filters?: { category?: string | null; size?: string | null }): Promise<Product[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return readyToWearProducts;
+    return readyToWearProducts.filter((p) => {
+      const categoryValue = (p as any).category ? String((p as any).category) : '';
+      const categoryOk = filters?.category ? categoryValue.toLowerCase().includes(filters.category.toLowerCase()) : true;
+      const sizeOk = filters?.size
+        ? (p.options || '').toLowerCase().includes(filters.size.toLowerCase()) ||
+          categoryValue.toLowerCase().includes(filters.size.toLowerCase())
+        : true;
+      return categoryOk && sizeOk;
+    });
   }
 
   try {
-    const snapshot = await adminDb.collection('products')
-      .where('category', '==', 'ready-to-wear')
-      .get();
+    let query: FirebaseFirestore.Query = adminDb.collection('products').where('category', '==', 'ready-to-wear');
+
+    if (filters?.category) {
+      query = adminDb.collection('products').where('category', '==', filters.category);
+    }
+
+    const snapshot = await query.get();
 
     if (snapshot.empty) return readyToWearProducts;
 
-    return snapshot.docs.map(doc => doc.data() as Product);
+    const products = snapshot.docs.map(doc => doc.data() as Product);
+
+    if (filters?.size) {
+      const sizeLower = filters.size.toLowerCase();
+      return products.filter((p) => (p.options || '').toLowerCase().includes(sizeLower));
+    }
+
+    return products;
   } catch (error) {
     console.error('Failed to fetch RTW products from Firebase, falling back to mock data:', error);
     return readyToWearProducts;

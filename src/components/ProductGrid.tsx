@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, ChevronDown } from "lucide-react";
 
 export interface GridProduct {
@@ -13,21 +14,63 @@ export interface GridProduct {
   alt: string;
 }
 
-export default function ProductGrid({ products }: { products: GridProduct[] }) {
+export default function ProductGrid({
+  products,
+  activeCategory,
+  activeSize,
+}: {
+  products: GridProduct[];
+  activeCategory?: string | null;
+  activeSize?: string | null;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const setParam = (key: string, value: string | null) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    router.push(`/ready-to-wear?${params.toString()}`);
+  };
+
   return (
     <>
       {/* Filtering & Sort Bar */}
       <section className="flex flex-col md:flex-row justify-between items-start md:items-center py-8 gap-6 mb-12 border-b border-[var(--color-outline-variant)]/30">
         <div className="flex items-center gap-10">
-          <button className="flex items-center gap-2 font-sans text-xs uppercase tracking-widest text-[var(--color-on-surface)] hover:opacity-70 transition-opacity">
-            <span>Filter</span>
-            <SlidersHorizontal strokeWidth={1} size={16} />
-          </button>
-          <div className="hidden md:flex gap-8 text-xs uppercase tracking-widest text-[var(--color-secondary)]">
-            <button className="hover:text-[var(--color-on-surface)] transition-colors">Dresses</button>
-            <button className="hover:text-[var(--color-on-surface)] transition-colors">Knitwear</button>
-            <button className="hover:text-[var(--color-on-surface)] transition-colors">Outerwear</button>
-            <button className="hover:text-[var(--color-on-surface)] transition-colors">Tailoring</button>
+          <div className="flex items-center gap-3 font-sans text-xs uppercase tracking-widest text-[var(--color-on-surface)]">
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal strokeWidth={1} size={16} />
+              Filter
+            </span>
+            <select
+              className="text-[var(--color-secondary)] bg-transparent border-b border-[var(--color-outline-variant)]/50 focus:outline-none"
+              value={activeCategory || ""}
+              onChange={(e) => setParam("category", e.target.value || null)}
+            >
+              <option value="">All Categories</option>
+              <option value="ready-to-wear">Ready to Wear</option>
+              <option value="new-arrivals">New Arrivals</option>
+              <option value="outerwear">Outerwear</option>
+              <option value="knitwear">Knitwear</option>
+              <option value="dresses">Dresses</option>
+            </select>
+            <select
+              className="text-[var(--color-secondary)] bg-transparent border-b border-[var(--color-outline-variant)]/50 focus:outline-none"
+              value={activeSize || ""}
+              onChange={(e) => setParam("size", e.target.value || null)}
+            >
+              <option value="">Any Size</option>
+              <option value="fr34">FR 34</option>
+              <option value="fr36">FR 36</option>
+              <option value="fr38">FR 38</option>
+              <option value="fr40">FR 40</option>
+              <option value="m">M</option>
+              <option value="l">L</option>
+            </select>
           </div>
         </div>
         <div className="flex items-center gap-4">
