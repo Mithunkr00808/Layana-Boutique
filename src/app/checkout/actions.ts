@@ -1,6 +1,7 @@
 "use server";
 
 import crypto from "crypto";
+import * as admin from "firebase-admin";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { razorpay } from "@/lib/razorpay";
@@ -201,6 +202,8 @@ export async function verifyPayment(data: {
 
     const address = await fetchAddress(uid, data.addressId);
 
+    const subtotal = pending.items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
+
     const orderDoc = await adminDb.collection("orders").add({
       userId: uid,
       razorpayOrderId: data.razorpay_order_id,
@@ -209,9 +212,13 @@ export async function verifyPayment(data: {
       status: "paid",
       items: pending.items,
       amount: pending.amount,
+      subtotal,
+      shipping: 0,
+      total: subtotal,
       currency: pending.currency ?? "INR",
+      receipt: data.razorpay_payment_id,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
       address,
-      createdAt: new Date().toISOString(),
     });
 
     // Clear cart

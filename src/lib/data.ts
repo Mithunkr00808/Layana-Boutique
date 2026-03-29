@@ -386,9 +386,14 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
         }))
       : [];
 
-    const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
-    const shipping = 0;
-    const total = data.amount ? Number(data.amount) / 100 : subtotal + shipping;
+    const subtotalStored = typeof data.subtotal === 'number' ? data.subtotal : null;
+    const subtotal = subtotalStored ?? items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
+    const shippingStored = typeof data.shipping === 'number' ? data.shipping : null;
+    const shipping = shippingStored ?? 0;
+    const totalStored = typeof data.total === 'number' ? data.total : null;
+    const total =
+      totalStored ??
+      (typeof data.amount === 'number' ? Number(data.amount) / 100 : subtotal + shipping);
 
     const address: Address | null = data.address
       ? {
@@ -408,6 +413,7 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       razorpayOrderId: data.razorpayOrderId,
       razorpayPaymentId: data.razorpayPaymentId,
       razorpaySignature: data.razorpaySignature,
+      receipt: data.receipt,
       items,
       subtotal,
       shipping,
@@ -420,5 +426,103 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
   } catch (error) {
     console.error('Failed to fetch order:', error);
     return null;
+  }
+}
+
+function mapOrder(doc: FirebaseFirestore.DocumentSnapshot): Order {
+  const data = doc.data() as any;
+  const items: CartItem[] = Array.isArray(data?.items)
+    ? data.items.map((item: any) => ({
+        id: item.id ?? '',
+        name: item.name ?? '',
+        variant: item.variant ?? '',
+        size: item.size ?? '',
+        quantity: item.quantity ?? 1,
+        price: item.price ?? '',
+        rawPrice: item.rawPrice ?? 0,
+        image: item.image ?? '',
+        alt: item.alt ?? '',
+      }))
+    : [];
+
+  const subtotalStored = typeof data?.subtotal === 'number' ? data.subtotal : null;
+  const subtotal = subtotalStored ?? items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
+  const shippingStored = typeof data?.shipping === 'number' ? data.shipping : null;
+  const shipping = shippingStored ?? 0;
+  const totalStored = typeof data?.total === 'number' ? data.total : null;
+  const total =
+    totalStored ??
+    (typeof data?.amount === 'number' ? Number(data.amount) / 100 : subtotal + shipping);
+
+  const address: Address | null = data?.address
+    ? {
+        id: data.address.id ?? 'address',
+        fullName: data.address.fullName ?? '',
+        phone: data.address.phone ?? '',
+        streetAddress: data.address.streetAddress ?? '',
+        city: data.address.city ?? '',
+        state: data.address.state ?? '',
+        postalCode: data.address.postalCode ?? '',
+      }
+    : null;
+
+  return {
+    id: doc.id,
+    userId: data?.userId ?? '',
+    razorpayOrderId: data?.razorpayOrderId ?? '',
+    razorpayPaymentId: data?.razorpayPaymentId ?? '',
+    razorpaySignature: data?.razorpaySignature,
+    receipt: data?.receipt,
+    items,
+    subtotal,
+    shipping,
+    total,
+    currency: data?.currency ?? 'INR',
+    status: data?.status ?? 'paid',
+    address,
+    createdAt: data?.createdAt ?? null,
+  };
+}
+
+export async function getUserOrders(limit = 20): Promise<Order[]> {
+  if (!process.env.FIREBASE_PROJECT_ID) return [];
+
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session')?.value;
+    if (!sessionCookie) return [];
+
+    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const uid = decoded?.uid;
+    if (!uid) return [];
+
+    const snapshot = await adminDb
+      .collection('orders')
+      .where('userId', '==', uid)
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(mapOrder);
+  } catch (error) {
+    console.error('Failed to fetch user orders:', error);
+    return [];
+  }
+}
+
+export async function getAllOrders(limit = 100): Promise<Order[]> {
+  if (!process.env.FIREBASE_PROJECT_ID) return [];
+
+  try {
+    const snapshot = await adminDb
+      .collection('orders')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(mapOrder);
+  } catch (error) {
+    console.error('Failed to fetch all orders:', error);
+    return [];
   }
 }
