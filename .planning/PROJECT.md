@@ -11,10 +11,10 @@
 - ✓ **Product Catalog Engine** — Live catalog pulling from `products` and `productDetails` Firestore collections with safe hydrations.
 - ✓ **Interactive Cart** — Real-time synced cart additions using Next.js Server Actions.
 - ✓ **Admin Catalog UI** — A secure backend to manage product documents and text data.
+- ✓ **SEC-01**: User Authentication (Login, Signup) tracking session state globally. *(Validated in Phase 1)*
+- ✓ **ACC-01**: User Accounts Dashboard (Saved shipping addresses, Wishlist management). *(Validated in Phase 1)*
 
 ### Active
-- [ ] **SEC-01**: User Authentication (Login, Signup, Magic link/OAuth) tracking session state globally.
-- [ ] **ACC-01**: User Accounts Dashboard (Saved shipping addresses, Wishlist management).
 - [ ] **CHK-01**: Razorpay Checkout Integration securely processing payments.
 - [ ] **ORD-01**: Post-checkout Order Confirmation and user email receipts.
 - [ ] **ADM-01**: Order management listing in the existing Admin Panel.
