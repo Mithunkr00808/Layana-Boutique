@@ -4,9 +4,11 @@ import { useTransition, useState } from "react";
 import { saveCatalogItem, deleteCatalogItem } from "@/app/admin/actions";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash } from "lucide-react";
+import { uploadImage } from "@/lib/firebase/storage";
 
 export default function ProductForm({ initialData }: { initialData?: any }) {
   const [isPending, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -14,12 +16,32 @@ export default function ProductForm({ initialData }: { initialData?: any }) {
 
   async function handleSubmit(formData: FormData) {
     setError(null);
+
     startTransition(async () => {
-      const result = await saveCatalogItem(formData, isEditing ? initialData.id : undefined);
-      if (result.success) {
-        router.push("/admin/catalog");
-      } else {
-        setError(result.error || "Failed to save product.");
+      try {
+        const file = formData.get("imageFile") as File | null;
+        const fallbackUrl = formData.get("image")?.toString() || initialData?.image || "";
+        formData.delete("imageFile");
+
+        if (file && file.size > 0) {
+          setIsUploading(true);
+          const uploadedUrl = await uploadImage(file);
+          formData.set("image", uploadedUrl);
+        } else if (fallbackUrl) {
+          formData.set("image", fallbackUrl);
+        }
+
+        const result = await saveCatalogItem(formData, isEditing ? initialData.id : undefined);
+        if (result.success) {
+          router.push("/admin/catalog");
+        } else {
+          setError(result.error || "Failed to save product.");
+        }
+      } catch (err: any) {
+        console.error(err);
+        setError("Upload failed. Please try again.");
+      } finally {
+        setIsUploading(false);
       }
     });
   }
@@ -88,13 +110,19 @@ export default function ProductForm({ initialData }: { initialData?: any }) {
         </div>
 
         <div>
-           <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">Main Image HTTPS Link</label>
+           <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">Upload Image</label>
+           <input 
+             type="file" 
+             name="imageFile"
+             accept="image/*"
+             className="w-full border-b border-gray-200 py-2 focus:border-black outline-none transition-colors" 
+           />
+           <p className="text-[11px] text-gray-500 mt-1">You can also paste a URL below if you already have one.</p>
            <input 
              type="url" 
              name="image" 
-             required
              defaultValue={initialData?.images?.[0]?.src || initialData?.image}
-             className="w-full border-b border-gray-200 py-2 focus:border-black outline-none transition-colors" 
+             className="w-full border-b border-gray-200 py-2 focus:border-black outline-none transition-colors mt-2" 
              placeholder="https://images.unsplash.com/..." 
            />
         </div>
@@ -158,10 +186,10 @@ export default function ProductForm({ initialData }: { initialData?: any }) {
           
           <button 
             type="submit" 
-            disabled={isPending}
+            disabled={isPending || isUploading}
             className="bg-black text-white px-8 py-3 text-xs tracking-widest uppercase hover:bg-black/80 transition-opacity active:scale-95 disabled:opacity-50 flex items-center justify-center min-w-[140px]"
           >
-            {isPending ? <Loader2 className="animate-spin" size={16} /> : (isEditing ? "Save Changes" : "Publish Product")}
+            {isPending || isUploading ? <Loader2 className="animate-spin" size={16} /> : (isEditing ? "Save Changes" : "Publish Product")}
           </button>
         </div>
       </div>
