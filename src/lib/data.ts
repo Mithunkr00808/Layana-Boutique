@@ -582,7 +582,9 @@ export async function getUserOrders(limit = 20): Promise<Order[]> {
 
     return snapshot.docs.map(mapOrder);
   } catch (error) {
-    console.error('Failed to fetch user orders:', error);
+    // Log only the message to avoid noisy source-map parsing in dev
+    const message = (error as any)?.message || String(error);
+    console.warn('Failed to fetch user orders:', message);
     return [];
   }
 }

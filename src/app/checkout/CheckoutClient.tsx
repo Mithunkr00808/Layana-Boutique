@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { createOrder, verifyPayment } from "./actions";
 import type { Address, CartItem } from "@/lib/data";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { db } from "@/lib/firebase/config";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 type PaymentState = "idle" | "creating" | "verifying" | "failed";
 
@@ -22,10 +25,23 @@ declare global {
 
 export default function CheckoutClient({ items, addresses, subtotal }: Props) {
   const router = useRouter();
+  const { user } = useAuth();
+  const [addressesState, setAddressesState] = useState<Address[]>(addresses);
   const [selectedAddressId, setSelectedAddressId] = useState<string>(addresses[0]?.id ?? "");
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [addingAddress, setAddingAddress] = useState(false);
+  const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
+  const [newAddress, setNewAddress] = useState({
+    fullName: "",
+    phone: "",
+    streetAddress: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    addressType: "home" as Address["addressType"],
+  });
 
   useEffect(() => {
     if (toastMessage) {
@@ -115,36 +131,83 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
   const formatPrice = (value: number) =>
     `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const shippingAmount = shippingMethod === "standard" ? 0 : 250;
+  const totalWithShipping = subtotal + shippingAmount;
+  const totalDisplayWithShipping = formatPrice(totalWithShipping);
+
+  const setAddressField = (key: keyof typeof newAddress, value: string) => {
+    setNewAddress((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const maybeAutoFillCityState = async (pin: string) => {
+    if (pin.length !== 6 || newAddress.city || newAddress.state) return;
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+      const data = (await res.json()) as any[];
+      const office = data?.[0]?.PostOffice?.[0];
+      if (office) {
+        setNewAddress((prev) => ({
+          ...prev,
+          city: prev.city || office?.District || "",
+          state: prev.state || office?.State || "",
+        }));
+      }
+    } catch (err) {
+      console.warn("PIN lookup failed", err);
+    }
+  };
+
+  const addNewAddress = async () => {
+    if (!user) {
+      setToastMessage("Sign in to add an address.");
+      return;
+    }
+    if (
+      !newAddress.fullName ||
+      !/^[6-9]\d{9}$/.test(newAddress.phone) ||
+      !newAddress.streetAddress ||
+      !newAddress.city ||
+      !newAddress.state ||
+      !/^[1-9][0-9]{5}$/.test(newAddress.postalCode)
+    ) {
+      setToastMessage("Please fill all address fields correctly.");
+      return;
+    }
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userDocRef);
+      const stored = (snap.data()?.addresses as Address[] | undefined) || [];
+      const newEntry: Address = { ...newAddress, id: crypto.randomUUID() };
+      const updated = [...stored, newEntry];
+      await setDoc(userDocRef, { addresses: updated }, { merge: true });
+      setAddressesState(updated);
+      setSelectedAddressId(newEntry.id);
+      setAddingAddress(false);
+      setToastMessage("Address added");
+    } catch (err) {
+      console.error("Failed to add address:", err);
+      setToastMessage("Could not add address. Try again.");
+    }
+  };
+
   return (
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 relative">
-        <div className="lg:col-span-2 space-y-8">
-          <section className="border border-[var(--color-outline-variant)]/30 rounded-2xl p-6 md:p-8 bg-[var(--color-surface-container-low)]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-serif text-2xl text-[var(--color-on-surface)]">Delivery address</h2>
-              <a
-                href="/account/addresses?return=/checkout"
-                className="text-sm font-sans tracking-widest uppercase text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors"
-              >
-                Add new
-              </a>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative">
+        <div className="lg:col-span-2 space-y-14">
+          <section className="space-y-6">
+            <h2 className="font-serif text-3xl tracking-tight">Shipping Address</h2>
 
-            {addresses.length === 0 ? (
-              <p className="text-sm text-[var(--color-secondary)]">
-                No addresses saved. Add one to continue to payment.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {addresses.map((address) => (
+            {addressesState.length > 0 && (
+              <div className="space-y-3">
+                {addressesState.map((address) => (
                   <label
                     key={address.id}
-                    className={`block rounded-xl border p-4 cursor-pointer transition-colors ${
+                    className={`flex items-start justify-between p-4 rounded-lg border transition cursor-pointer ${
                       selectedAddressId === address.id
                         ? "border-[var(--color-primary)] bg-[var(--color-surface-container-lowest)]"
-                        : "border-[var(--color-outline-variant)]/40 hover:border-[var(--color-primary)]/50"
+                        : "border-[var(--color-outline-variant)]/40 hover:border-[var(--color-primary)]/60"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -156,88 +219,235 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
                         onChange={() => setSelectedAddressId(address.id)}
                       />
                       <div>
-                        <p className="font-serif text-lg text-[var(--color-on-surface)]">{address.fullName}</p>
+                        <p className="font-serif text-lg">{address.fullName}</p>
                         <p className="text-sm text-[var(--color-secondary)]">
                           {address.streetAddress}, {address.city}, {address.state} {address.postalCode}
                         </p>
                         <p className="text-sm text-[var(--color-secondary)] mt-1">+91 {address.phone}</p>
                       </div>
                     </div>
+                    <span className="text-xs uppercase tracking-[0.25em] text-[var(--color-secondary)]">
+                      {address.addressType || "Home"}
+                    </span>
                   </label>
                 ))}
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setAddingAddress((v) => !v)}
+              className="text-sm uppercase tracking-[0.25em] font-semibold text-[var(--color-on-surface)]"
+            >
+              {addingAddress ? "Close new address" : "Add new address"}
+            </button>
+
+            {addingAddress && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 p-6 rounded-xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-low)]">
+                <div className="md:col-span-2">
+                  <label className="block text-[var(--color-secondary)] text-xs uppercase tracking-[0.25em] mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    value={newAddress.fullName}
+                    onChange={(e) => setAddressField("fullName", e.target.value)}
+                    className="w-full bg-transparent border-b border-[var(--color-outline-variant)]/40 focus:border-[var(--color-primary)] focus:ring-0 py-3"
+                    placeholder="Full Name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[var(--color-secondary)] text-xs uppercase tracking-[0.25em] mb-2">
+                    Phone
+                  </label>
+                  <input
+                    value={newAddress.phone}
+                    onChange={(e) => setAddressField("phone", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                    maxLength={10}
+                    inputMode="numeric"
+                    className="w-full bg-transparent border-b border-[var(--color-outline-variant)]/40 focus:border-[var(--color-primary)] focus:ring-0 py-3"
+                    placeholder="10-digit mobile"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[var(--color-secondary)] text-xs uppercase tracking-[0.25em] mb-2">
+                    PIN Code
+                  </label>
+                  <input
+                    value={newAddress.postalCode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                      setAddressField("postalCode", val);
+                      if (val.length === 6) maybeAutoFillCityState(val);
+                    }}
+                    maxLength={6}
+                    inputMode="numeric"
+                    className="w-full bg-transparent border-b border-[var(--color-outline-variant)]/40 focus:border-[var(--color-primary)] focus:ring-0 py-3"
+                    placeholder="6-digit PIN"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[var(--color-secondary)] text-xs uppercase tracking-[0.25em] mb-2">
+                    Street Address
+                  </label>
+                  <input
+                    value={newAddress.streetAddress}
+                    onChange={(e) => setAddressField("streetAddress", e.target.value)}
+                    className="w-full bg-transparent border-b border-[var(--color-outline-variant)]/40 focus:border-[var(--color-primary)] focus:ring-0 py-3"
+                    placeholder="House number, street, area"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[var(--color-secondary)] text-xs uppercase tracking-[0.25em] mb-2">
+                    City
+                  </label>
+                  <input
+                    value={newAddress.city}
+                    onChange={(e) => setAddressField("city", e.target.value)}
+                    className="w-full bg-transparent border-b border-[var(--color-outline-variant)]/40 focus:border-[var(--color-primary)] focus:ring-0 py-3"
+                    placeholder="City"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[var(--color-secondary)] text-xs uppercase tracking-[0.25em] mb-2">
+                    State
+                  </label>
+                  <input
+                    value={newAddress.state}
+                    onChange={(e) => setAddressField("state", e.target.value)}
+                    className="w-full bg-transparent border-b border-[var(--color-outline-variant)]/40 focus:border-[var(--color-primary)] focus:ring-0 py-3"
+                    placeholder="State"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[var(--color-secondary)] text-xs uppercase tracking-[0.25em] mb-3">
+                    Address Type
+                  </label>
+                  <div className="flex gap-3">
+                    {["home", "work", "other"].map((type) => {
+                      const active = newAddress.addressType === type;
+                      return (
+                        <button
+                          type="button"
+                          key={type}
+                          onClick={() => setAddressField("addressType", type as Address["addressType"])}
+                          className={`px-4 py-2 rounded-full border text-sm capitalize transition ${
+                            active
+                              ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                              : "bg-white text-[var(--color-on-surface)] border-[var(--color-outline-variant)]/50 hover:border-[var(--color-primary)]"
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={addNewAddress}
+                    className="px-6 py-3 bg-[var(--color-primary)] text-white text-xs uppercase tracking-[0.2em] rounded-md hover:opacity-90"
+                  >
+                    Save & Use
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
-          <section className="border border-[var(--color-outline-variant)]/30 rounded-2xl p-6 md:p-8 bg-[var(--color-surface-container-low)]">
-            <h2 className="font-serif text-2xl text-[var(--color-on-surface)] mb-6">Order review</h2>
-            <div className="space-y-6">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between border-b border-[var(--color-outline-variant)]/20 pb-4">
+          <section className="space-y-6">
+            <h2 className="font-serif text-3xl tracking-tight">Shipping Method</h2>
+            <div className="space-y-3">
+              <label className="group flex items-center justify-between p-5 rounded-lg border border-[var(--color-outline-variant)]/30 hover:border-[var(--color-primary)]/60 transition cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <input
+                    type="radio"
+                    name="shipping"
+                    checked={shippingMethod === "standard"}
+                    onChange={() => setShippingMethod("standard")}
+                    className="w-5 h-5 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  />
                   <div>
-                    <p className="font-serif text-lg text-[var(--color-on-surface)]">{item.name}</p>
-                    <p className="text-xs uppercase tracking-widest text-[var(--color-secondary)]">
-                      {item.variant} · {item.size} · Qty {item.quantity}
-                    </p>
+                    <span className="block font-sans text-base font-semibold">Standard Delivery</span>
+                    <span className="text-[var(--color-secondary)] text-sm">3-5 Business Days</span>
                   </div>
-                  <p className="font-serif text-lg text-[var(--color-on-surface)]">
-                    {formatPrice(item.rawPrice * item.quantity)}
-                  </p>
                 </div>
-              ))}
-            </div>
-            <div className="mt-6 space-y-3">
-              <div className="flex justify-between text-sm text-[var(--color-secondary)]">
-                <span>Subtotal</span>
-                <span>{totalDisplay}</span>
-              </div>
-              <div className="flex justify-between text-sm text-[var(--color-secondary)]">
-                <span>Shipping</span>
-                <span>Complimentary</span>
-              </div>
-              <div className="pt-4 flex justify-between items-center border-t border-[var(--color-outline-variant)]/20">
-                <span className="font-serif text-xl text-[var(--color-on-surface)]">Total</span>
-                <span className="font-serif text-2xl text-[var(--color-on-surface)]">{totalDisplay}</span>
-              </div>
+                <span className="font-sans font-medium text-sm">Complimentary</span>
+              </label>
+              <label className="group flex items-center justify-between p-5 rounded-lg border border-[var(--color-outline-variant)]/30 hover:border-[var(--color-primary)]/60 transition cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <input
+                    type="radio"
+                    name="shipping"
+                    checked={shippingMethod === "express"}
+                    onChange={() => setShippingMethod("express")}
+                    className="w-5 h-5 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  />
+                  <div>
+                    <span className="block font-sans text-base font-semibold">Express Priority</span>
+                    <span className="text-[var(--color-secondary)] text-sm">Next Day Delivery</span>
+                  </div>
+                </div>
+                <span className="font-sans font-medium text-sm">{formatPrice(shippingAmount)}</span>
+              </label>
             </div>
           </section>
         </div>
 
         <div className="lg:col-span-1">
-          <div className="bg-[var(--color-surface-container-lowest)] p-6 rounded-2xl shadow-[0_24px_48px_rgba(27,28,28,0.06)] border border-[var(--color-outline-variant)]/20">
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-sans text-xs tracking-[0.2em] uppercase text-[var(--color-secondary)]">
-                Pay securely
-              </p>
-              <span className="text-xs text-[var(--color-secondary)]">Razorpay</span>
+          <div className="bg-[var(--color-surface-container-low)] p-8 rounded-xl shadow-[0_24px_48px_rgba(27,28,28,0.06)] border border-[var(--color-outline-variant)]/20">
+            <h3 className="font-serif text-2xl mb-6">Order Summary</h3>
+            <div className="space-y-6 mb-8">
+              {items.map((item) => (
+                <div key={item.id} className="flex gap-4">
+                  <div className="w-20 h-28 bg-[var(--color-surface-container-highest)] overflow-hidden rounded-lg">
+                    <img
+                      src={item.image || "/placeholder.png"}
+                      alt={item.alt || item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-sans font-semibold text-[var(--color-on-surface)]">{item.name}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)] mt-1">
+                      {item.size || "OS"} · Qty {item.quantity}
+                    </p>
+                    <p className="mt-1 font-sans font-semibold text-[var(--color-on-surface)]">
+                      {formatPrice(item.rawPrice * item.quantity)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <p className="font-serif text-3xl text-[var(--color-on-surface)] mb-6">{totalDisplay}</p>
+
+            <div className="space-y-3 pt-4 border-t border-[var(--color-outline-variant)]/20">
+              <div className="flex justify-between text-sm text-[var(--color-secondary)]">
+                <span>Subtotal</span>
+                <span>{formatPrice(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-[var(--color-secondary)]">
+                <span>Shipping</span>
+                <span>{shippingAmount === 0 ? "Complimentary" : formatPrice(shippingAmount)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-semibold text-[var(--color-on-surface)] pt-2">
+                <span>Total</span>
+                <span>{totalDisplayWithShipping}</span>
+              </div>
+            </div>
+
             <button
               onClick={handlePay}
               disabled={paymentState === "creating" || paymentState === "verifying" || isPending || !items.length}
-              className="w-full py-4 bg-[var(--color-primary)] text-white font-sans text-xs tracking-[0.2em] uppercase transition-all active:scale-[0.98] hover:opacity-90 disabled:opacity-50"
+              className="w-full mt-8 py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-container)] text-white font-sans text-xs tracking-[0.25em] uppercase rounded-md shadow-lg shadow-[var(--color-primary)]/10 active:scale-95 hover:opacity-90 disabled:opacity-50"
             >
               {paymentState === "creating"
                 ? "Securing…"
                 : paymentState === "verifying"
                 ? "Confirming…"
-                : "Pay Now"}
+                : "Proceed to Payment"}
             </button>
-            {paymentState === "failed" && (
-              <div className="mt-4 text-sm text-[var(--color-error)]">
-                Payment failed. Please try again.
-                <button
-                  onClick={handlePay}
-                  className="ml-3 underline text-[var(--color-on-surface)]"
-                  disabled={isPending}
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-            <p className="mt-4 text-xs text-[var(--color-secondary)] leading-relaxed">
-              Your payment is encrypted and processed securely. On cancellation, you can reopen the payment window
-              anytime.
+            <p className="text-xs text-[var(--color-secondary)] mt-4 leading-relaxed">
+              By placing your order, you agree to our Terms and Privacy. Secure transaction powered by Razorpay.
             </p>
           </div>
         </div>
