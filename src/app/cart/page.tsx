@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartItems from "@/components/CartItems";
 import CartSummary from "@/components/CartSummary";
-import { getCartItems } from "@/lib/data";
+import { getCartItemsForUser } from "@/lib/data";
 
 import type { Metadata } from "next";
 
@@ -11,8 +11,10 @@ export const metadata: Metadata = {
   description: "Explore the items currently curated in your selection.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function CartPage() {
-  const activeCart = await getCartItems();
+  const activeCart = await getCartItemsForUser();
 
   return (
     <div className="flex flex-col min-h-screen">
