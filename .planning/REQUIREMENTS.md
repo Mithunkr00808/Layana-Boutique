@@ -23,8 +23,8 @@
 - [x] **ADM-02**: The `ProductForm` utilizes a `<input type="file" />` that streams directly to a Firebase Storage bucket, natively returning an HTTPS img URL to store inside `productDetails`.
 
 ### Catalog & Search
-- [ ] **CAT-01**: Filtering capability by native properties (Category, Size).
-- [ ] **CAT-02**: Implementation of Keyword search for products.
+- [x] **CAT-01**: Filtering capability by native properties (Category, Size).
+- [x] **CAT-02**: Implementation of Keyword search for products.
 
 ---
 ## v2 Requirements (Deferred)
