@@ -84,6 +84,7 @@ export interface Order {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   razorpaySignature?: string;
+  receipt?: string;
   items: CartItem[];
   subtotal: number;
   shipping: number;

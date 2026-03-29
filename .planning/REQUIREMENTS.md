@@ -8,7 +8,7 @@
 - [ ] **AUTH-03**: Users can log out securely ending their session cookie.
 
 ### Accounts
-- [ ] **ACC-01**: Authenticated user can view past orders successfully placed.
+- [x] **ACC-01**: Authenticated user can view past orders successfully placed.
 - [ ] **ACC-02**: Authenticated user can save commonly used Shipping Addresses to quickly populate checkout.
 - [ ] **ACC-03**: User can save out-of-cart "Wishlist" items securely linked to their account.
 
@@ -19,7 +19,7 @@
 - [x] **CHK-04**: An order confirmation email/SMS receipt is triggered post-purchase (optional depending on Razorpay setup).
 
 ### Admin Panel
-- [ ] **ADM-01**: Added "Order History" view to the backend admin dashboard to inspect verified purchases.
+- [x] **ADM-01**: Added "Order History" view to the backend admin dashboard to inspect verified purchases.
 - [ ] **ADM-02**: The `ProductForm` utilizes a `<input type="file" />` that streams directly to a Firebase Storage bucket, natively returning an HTTPS img URL to store inside `productDetails`.
 
 ### Catalog & Search
