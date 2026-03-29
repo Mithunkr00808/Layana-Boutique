@@ -1,25 +1,18 @@
-# Integrations Reference
+# External Integrations
 
-## Firebase
-The application relies heavily on Firebase for data storage and potential authentication.
+## Database Integration: Firebase Firestore
+The application heavily relies on Google Firebase for real-time and server-rendered data persistence.
 
-### Client-side Connection
-- **Config**: `src/lib/firebase/config.ts`
-- **Instance**: Initialized using standard `firebase/app` and `firebase/firestore`.
-- **Usage**: Exported `db` instance is used in Client Components for real-time updates or simple reads where Server Components aren't suitable.
-- **Environment Variables**:
-  - `NEXT_PUBLIC_FIREBASE_API_KEY`
-  - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-  - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-  - ...all prefixed with `NEXT_PUBLIC` for client access.
+### 1. Client-Side Firebase SDK (`src/lib/firebase/config.ts`)
+- **Usage**: Initializes the connection to the Firebase backend.
+- **Config**: Relies on Next.js public environment variables starting with `NEXT_PUBLIC_FIREBASE_`.
 
-### Admin SDK (Server-side)
-- **Config**: `src/lib/firebase/admin.ts`
-- **Instance**: Initialized using `firebase-admin/app` and `firebase-admin/firestore`.
-- **Credential**: Uses `admin.credential.cert(...)` likely with an environment variable pointing to a service account JSON or direct credential strings.
-  - **Variable**: `FIREBASE_ADMIN_CREDENTIALS` or `FIREBASE_SERVICE_ACCOUNT_KEY`.
-- **Usage**: Used for seeding scripts and secure server-only data fetching in Server Components where bypassing client-side rules is required.
+### 2. Server-Side Firebase Admin SDK (`src/lib/firebase/admin.ts`)
+- **Usage**: Handles privileged database operations entirely on the Node.js backend to bypass client rules securely. 
+- **Key implementation**: Translates `\n` characters mapped in `.env.local` to standard newlines for the `FIREBASE_PRIVATE_KEY` during initialization.
 
-## Data Utilities
-- **Seeding**: `scripts/seed-firebase.ts` provides a mechanism to populate Firestore with sample boutique products and collections.
-- **Mocking**: `src/lib/data.ts` contains fallback logic or sample data structures used before full database integration.
+## Hosting & Delivery
+- Designed to be deployed on Vercel or any Node.js environment supporting Next.js Server Actions.
+
+## Key Subsystems
+- **Data Hydration**: Handled locally via `src/lib/data.ts`. The backend checks Firebase; if full details are missing (i.e. summary catalog items vs full models), the system dynamically populates defaults to prevent application crashes.

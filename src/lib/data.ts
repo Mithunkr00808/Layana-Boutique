@@ -5,6 +5,7 @@ import {
   journalArticles,
   productDetailMock,
   relatedProducts,
+  cartItemsMock,
 } from '@/data/mockData';
 
 // ── Type definitions ────────────────────────────────────────────────────────
@@ -51,6 +52,18 @@ export interface ProductDetail {
   sustainability: string;
   images: ProductImage[];
   sizes: ProductSize[];
+}
+
+export interface CartItem {
+  id: string;
+  name: string;
+  variant: string;
+  size: string;
+  quantity: number;
+  price: string;
+  rawPrice: number;
+  image: string;
+  alt: string;
 }
 
 // ── Data fetching functions ─────────────────────────────────────────────────
@@ -115,19 +128,41 @@ export async function getProductDetail(id: string): Promise<ProductDetail> {
   }
 
   try {
-    // Try exact doc ID first, then try common prefixed patterns from seeding
     let doc = await adminDb.collection('productDetails').doc(id).get();
 
-    if (!doc.exists) {
-      doc = await adminDb.collection('products').doc(`rtw-${id}`).get();
+    if (doc.exists) {
+      return doc.data() as ProductDetail;
     }
+
+    doc = await adminDb.collection('products').doc(`rtw-${id}`).get();
     if (!doc.exists) {
       doc = await adminDb.collection('products').doc(`new-arrival-${id}`).get();
     }
 
-    if (!doc.exists) return productDetailMock;
+    if (doc.exists) {
+      const summary = doc.data() as Product;
+      
+      return {
+        id: summary.id || id,
+        sku: `SKU-${summary.id?.toUpperCase() || id.toUpperCase()}`,
+        categoryPath: summary.category || 'Catalog',
+        name: summary.name || 'Unknown Product',
+        price: summary.price || '$0.00',
+        description: summary.options 
+          ? `Made from ${summary.options}. This product has not had its full description, materials, or editorial images uploaded yet.` 
+          : 'Full product description is pending. Please update via the admin panel.',
+        materials: ['Detail pending - Update via catalog admin'],
+        sustainability: 'Sustainability tracking pending',
+        images: summary.image ? [{ src: summary.image, alt: summary.alt || summary.name || 'Product Image', type: 'large' }] : [],
+        sizes: [
+          { label: 'S', available: true },
+          { label: 'M', available: true },
+          { label: 'L', available: true },
+        ]
+      };
+    }
 
-    return doc.data() as ProductDetail;
+    return productDetailMock;
   } catch (error) {
     console.error('Failed to fetch product detail from Firebase:', error);
     return productDetailMock;
@@ -147,5 +182,35 @@ export async function getRelatedProducts(): Promise<Product[]> {
   } catch (error) {
     console.error('Failed to fetch related products:', error);
     return relatedProducts;
+  }
+}
+
+export async function getCartItems(): Promise<CartItem[]> {
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    return cartItemsMock;
+  }
+
+  try {
+    const snapshot = await adminDb.collection('cartItems').get();
+
+    if (snapshot.empty) return cartItemsMock;
+
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: data.id ?? doc.id,
+        name: data.name,
+        variant: data.variant,
+        size: data.size,
+        quantity: data.quantity ?? 1,
+        price: data.price,
+        rawPrice: data.rawPrice ?? 0,
+        image: data.image,
+        alt: data.alt,
+      } as CartItem;
+    });
+  } catch (error) {
+    console.error('Failed to fetch cart items from Firebase, falling back to mock data:', error);
+    return cartItemsMock;
   }
 }

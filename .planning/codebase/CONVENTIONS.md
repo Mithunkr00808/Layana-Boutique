@@ -1,20 +1,14 @@
-# Conventions Reference
+# Coding Conventions
 
-## Coding Style
-- **TypeScript**: Consistent use of types (`interface`, `type`) for data structures.
-- **Components**: PascalCase filenames for React components (`Navbar.tsx`).
-- **File Organization**: Grouped by features and folders (`src/app`, `src/components`, `src/lib`).
+## Styles & Standards
+- **CSS Framework**: Tailwind CSS is the strict standard, eliminating arbitrary inline CSS.
+- **Language Rules**: TypeScript strict typing is encouraged. For rapid prototyping within server actions or internal admin dashboards, `any` is currently accepted but slated for eventual removal under strict mode configurations.
+- **Components**: Functional React components with hooks. 
 
-## Naming
-- **Routes**: Use lowercase for folder-based routing in `src/app`.
-- **Utilities**: Suffix utility files with their purpose where possible (`admin.ts`, `config.ts`, `data.ts`).
-- **Styles**: `globals.css` for Tailwind directives.
+## Best Practices Supported
+- **"use server" Directives**: Keep server-only operations strongly separated within dedicated `actions.ts` files inside App Router pathways. Never export server execution logic from client-facing page bodies directly if complexity scales.
+- **Progressive Hydration in UI**: Components like the `CartItems.tsx` implement `useTransition` for optimistic or pending states, so users do not experience lagging while backend database mutations are processed. Instead of blocking the whole application, the interactive subset merely displays a loader.
 
-## Styling (Tailwind)
-- **Utility-first**: No ad-hoc CSS unless strictly necessary.
-- **Animations**: Prefer `framer-motion` over raw CSS transitions for complex UI motion.
-- **Next.js Conventions**: App Router patterns, layouts, and server/client separation.
-
-## Linting
-- **ESLint**: configured via `eslint.config.mjs` and `eslint-config-next`.
-- **Prettier**: Implicitly follows Next.js linting standards.
+## Error Handling
+- Minimal error boundaries exist currently.
+- Functions gracefully fall back: `getProductDetail()` will yield a hydrated mock rather than hard-crashing if a specific property was not defined inside the catalog database. Data layers log issues to backend consoles but prevent UI disruption.

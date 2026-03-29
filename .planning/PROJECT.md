@@ -1,32 +1,52 @@
-# Project: Layana-Boutique
-
-## Vision
-To create a high-fidelity, premium boutique e-commerce experience that seamlessly blends editorial-style storytelling with a high-performance shopping engine. The focus is on a "Luxury at your fingertips" aesthetic, powered by modern React 19 patterns and Firebase for real-time scale.
-
-## Core Value
-**"Elegance in Motion"**: Every interaction, from page transitions to cart additions, should feel premium, smooth, and deliberate (high-fidelity animations), while maintaining robust core logic and performance.
-
-## Success Metrics
-- **Performance**: Lighthouse score > 90 on mobile; Core Web Vitals (LCP < 2.5s).
-- **Functionality**: Working checkout, persistent user accounts, and wishlists.
-- **Conversion**: A search/filter system that makes finding luxury items effortless.
-- **Brand**: Animations that feel "editorial" rather than "generic".
+# Layana Boutique 2.0: Commerce & Accounts
 
 ## Context
-- **Stack**: Next.js 16 (App Router), Tailwind 4, Firebase, Framer Motion.
-- **Deployment**: Next.js Vercel (recommended) or Firebase Hosting.
-- **State**: Currently a brownfield project with foundational components mapped.
+**What This Is:** A massive expansion to the Layana Boutique architecture. Evolving the platform from a static-like brochure with a cart into a fully functional, self-serving e-commerce engine with authenticated users, secure payments, search features, and a scalable admin panel.
 
-## Requirements Summary
-- **Shop**: Full functional cart, checkout (mocked), and payment flow.
-- **User System**: Authentication, Profile, and Wishlist management.
-- **Discovery**: Category filters (Size, Color, Collection) and Global Search.
-- **Performance**: Server-side optimization and SEO-best practices.
+**Why It Matters (Core Value):** Customers need a secure way to actually purchase items (Razorpay) while retaining a personalized experience (Accounts & Wishlists). Administrators need true independence from the codebase, requiring native image uploads (Firebase Storage) rather than static URLs.
+
+## Requirements
+
+### Validated
+- ✓ **Product Catalog Engine** — Live catalog pulling from `products` and `productDetails` Firestore collections with safe hydrations.
+- ✓ **Interactive Cart** — Real-time synced cart additions using Next.js Server Actions.
+- ✓ **Admin Catalog UI** — A secure backend to manage product documents and text data.
+
+### Active
+- [ ] **SEC-01**: User Authentication (Login, Signup, Magic link/OAuth) tracking session state globally.
+- [ ] **ACC-01**: User Accounts Dashboard (Saved shipping addresses, Wishlist management).
+- [ ] **CHK-01**: Razorpay Checkout Integration securely processing payments.
+- [ ] **ORD-01**: Post-checkout Order Confirmation and user email receipts.
+- [ ] **ADM-01**: Order management listing in the existing Admin Panel.
+- [ ] **ADM-02**: Native Firebase Storage integration on the Admin `ProductForm` to upload real images instead of external URLs.
+- [ ] **CAT-01**: Advanced storefront filtering (categories, size, price hooks) and direct text searching.
+
+### Out of Scope
+- [ ] Multiple currency support (Sticking to INR/Razorpay native standard for V1)
+- [ ] Automated shipping carrier integrations (e.g. FedEx/DHL) — flat rate/free shipping logic only for now.
 
 ## Key Decisions
-- **Payment Gateway**: Postponed (mocked for now).
-- **Animations**: Prioritized as first-class citizens in the development cycle.
-- **Infrastructure**: Firebase for DB and potentially Auth.
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Razorpay Gateway | Specifically chosen by stakeholder for regional payment flow | — Pending |
+| Firebase Storage | Already deep into the Firebase ecosystem (Firestore), provides seamless native integration without AWS buckets | — Pending |
 
 ---
-*Last updated: March 2026 after initial GSD Interview*
+*Last updated: Today after initialization*
+
+## Evolution
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state

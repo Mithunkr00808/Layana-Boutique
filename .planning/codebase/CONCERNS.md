@@ -1,12 +1,10 @@
-# Concerns Reference
+# Tech Debt and Areas of Concern
 
-## Tech Debt
-- **No Automated Testing**: High risk for regressions during new feature development or refactoring.
-- **Firebase Mix**: Usage of both `firebase-admin` and `firebase` client SDKs needs clear boundaries to prevent accidental client-side exposure of admin credentials.
+## Security & Access Control
+Currently, the `/admin` route namespace lacks strict session-level authentication (like NextAuth or Firebase tokens mapping to user roles). While this works entirely functionally for local bootstrapping, putting this code into a live production `vercel` deploy means an unauthorized client could edit catalog contents directly through Server Actions if they discover the Next 15 paths.
 
-## Security
-- **Environment Variables**: Verify that all Firebase keys are strictly managed via `.env` and never hardcoded in the repository.
-- **Validation**: Ensure Firestore Security Rules are in place, as client-side code (`src/lib/firebase/config.ts`) bypasses server-side checks.
+## Form Integrity
+The `ProductForm` leverages some basic HTML5 validations (`required` attribute). A deeper adoption of Zod to intercept all actions asynchronously in `actions.ts` might be necessary as custom product structures get significantly more nuanced (for example mapping nested size availability objects perfectly or throwing formal field errors).
 
-## Architecture
-- **Data Fetching Consistency**: The project currently fetching data in `src/lib/data.ts` should be monitored to ensure it scales as the product catalog grows.
+## Cache Synchronization
+When creating or editing a document through `src/app/admin/actions.ts`, Next.js aggressively wipes the cache tree paths related to store browsing (`revalidatePath("/")`). As traffic increases, targeting specifics (e.g. `revalidateTag` per single item changed) to avoid blasting all ISR generation nodes will scale more cheaply.

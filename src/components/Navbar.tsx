@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, ShoppingBag, Menu } from "lucide-react";
+import { Heart, ShoppingBag, Menu, User as UserIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,9 +37,12 @@ export default function Navbar() {
           </div>
         </div>
         <div className="flex items-center gap-6">
-          <button className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95" aria-label="Favorites">
+          <Link href="/account/wishlist" className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95" aria-label="Favorites">
             <Heart strokeWidth={1.5} size={24} />
-          </button>
+          </Link>
+          <Link href={user ? "/account" : "/login"} className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95" aria-label="Account">
+            <UserIcon strokeWidth={1.5} size={24} />
+          </Link>
           <Link href="/cart" className="text-zinc-900 hover:opacity-70 transition-opacity active:scale-95" aria-label="Shopping Bag">
             <ShoppingBag strokeWidth={1.5} size={24} />
           </Link>

@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { Truck, Minus, Plus } from "lucide-react";
+import { Truck, Minus, Plus, Loader2 } from "lucide-react";
+import { useTransition } from "react";
+import { updateCartItemQuantity } from "@/app/cart/actions";
 
 export interface CartItemType {
   id: string;
@@ -16,6 +18,16 @@ export interface CartItemType {
 }
 
 export default function CartItems({ items }: { items: CartItemType[] }) {
+  const [isPending, startTransition] = useTransition();
+
+  const handleUpdateQuantity = (id: string, currentQty: number, change: number) => {
+    const newQty = currentQty + change;
+    if (newQty < 1) return; // Prevent going to 0 structurally for now
+    startTransition(async () => {
+      await updateCartItemQuantity(id, newQty);
+    });
+  };
+
   return (
     <div className="lg:col-span-8">
       <div className="w-full">
@@ -52,11 +64,21 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
             <div className="text-center font-sans text-sm">{item.size}</div>
             
             <div className="flex justify-center items-center gap-4">
-              <button className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors">
+              <button 
+                onClick={() => handleUpdateQuantity(item.id, item.quantity, -1)}
+                disabled={isPending || item.quantity <= 1}
+                className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
+              >
                 <Minus strokeWidth={1.5} size={16} />
               </button>
-              <span className="font-sans text-sm w-4 text-center">{item.quantity}</span>
-              <button className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors">
+              <span className="font-sans text-sm w-4 text-center">
+                {isPending ? <Loader2 className="animate-spin text-xs inline" size={14} /> : item.quantity}
+              </span>
+              <button 
+                onClick={() => handleUpdateQuantity(item.id, item.quantity, 1)}
+                disabled={isPending}
+                className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
+              >
                 <Plus strokeWidth={1.5} size={16} />
               </button>
             </div>

@@ -10,7 +10,7 @@ console.log(`Private Key: ${process.env.FIREBASE_PRIVATE_KEY ? '✅ Set' : '❌ 
 // Use dynamic imports so dotenv runs first
 async function main() {
   const { adminDb } = await import('../src/lib/firebase/admin');
-  const { newArrivals, readyToWearProducts, journalArticles, productDetailMock, relatedProducts } = await import('../src/data/mockData');
+  const { newArrivals, readyToWearProducts, journalArticles, productDetailMock, relatedProducts, cartItemsMock } = await import('../src/data/mockData');
 
   console.log('\n🌱 Seeding Database...');
 
@@ -42,6 +42,12 @@ async function main() {
   for (const item of relatedProducts) {
     const docRef = adminDb.collection('products').doc(`related-${item.id}`);
     batch.set(docRef, { ...item, category: 'related' });
+  }
+
+  console.log(`  → Pushing ${cartItemsMock.length} Cart Items...`);
+  for (const item of cartItemsMock) {
+    const docRef = adminDb.collection('cartItems').doc(item.id);
+    batch.set(docRef, { ...item });
   }
 
   try {

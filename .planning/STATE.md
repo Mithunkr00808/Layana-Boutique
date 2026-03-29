@@ -1,26 +1,10 @@
-# Project State: Layana-Boutique
+# Next.js Server & Client State Tracking
 
-## Memory
-High-fidelity boutique e-commerce. Brownfield base (already mapped). Ready to begin Phase 1: Authentication.
+## Current Active Phase
+**Phase**: None (Initialization Complete)
+**Goal**: N/A
+**Status**: Ready to commence Phase 1.
 
-## Recent Activity
-- **Initialization**: GSD Project vision set.
-- **Mapping**: Existing codebase structure documented in `.planning/codebase/`.
-- **Requirements**: P0 (Checkout, Auth, Wishlist) and P1 (Search, Filters, Motion) defined.
-- **Roadmap**: Fine-grained 10-phase roadmap created.
-- **Configuration**: YOLO mode, fine granularity, parallel execution, git tracking enabled.
-
-## Current Goal
-- **Phase 1**: User Authentication & UI.
-
-## Contextual Breadcrumbs
-- **Stack**: Next.js 16, Tailwind 4, Firebase.
-- **Aesthetic**: Premium, editorial motion.
-
-## Todo List
-- [ ] Initialize Phase 1 planning.
-- [ ] Research Firebase Auth best practices for Next.js 16.
-- [ ] Create Login/Signup UI fragments.
-
----
-*Created March 2026*
+## Project Memory
+- **Authentication Setup:** The user intends to map Firebase Auth closely alongside the Firebase Admin SDK to sidestep traditional React component unmounting issues with generic Next.js token logic. A `users` mirror needs to be established in Firestore right away during Phase 1.
+- **Razorpay Strategy:** We are verifying subtotals actively inside Server Actions rather than JS-client cart outputs to prevent frontend value manipulation.

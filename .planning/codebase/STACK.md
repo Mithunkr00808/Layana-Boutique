@@ -1,21 +1,21 @@
-# Stack Reference
+# Codebase Stack
 
-## Core
-- **Framework**: [Next.js](https://nextjs.org/) (v16.2.1) - App Router
-- **Language**: [TypeScript](https://www.typescriptlang.org/) (v5)
-- **Runtime**: [Node.js](https://nodejs.org/) (v20+)
+## Core Technologies
+- **Language**: TypeScript (using tsx for script execution)
+- **Framework**: Next.js 16.2.1
+- **UI Library**: React 19.2.4
+- **CSS Framework**: Tailwind CSS v4
 
-## Frontend
-- **Library**: [React](https://react.dev/) (v19.2.4)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) (v4)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **Icons**: [Lucide React](https://lucide.dev/)
+## State & Data
+- **Database/Backend**: Firebase Firestore (via `firebase` and `firebase-admin` v13)
+- **State Management**: React Hooks (`useState`, `useTransition`) combined with Next.js Server Actions.
 
-## Backend & Database
-- **Platform**: [Firebase](https://firebase.google.com/)
-- **Database**: Firestore (NoSQL)
-- **Admin**: Firebase Admin SDK (Node.js)
+## Key Dependencies
+- `firebase` (12.11.0): Client-side Firebase SDK for auth and basic setup.
+- `firebase-admin` (13.7.0): Server-side Firebase Admin SDK used in Server Actions.
+- `framer-motion` (12.38.0): Library for UI animations.
+- `lucide-react`: Minimalist icon library.
+- `@tailwindcss/postcss`: Required for Tailwind v4 integration.
 
-## Utility
-- **Environment**: `dotenv` for secret management
-- **Execution**: `tsx` for running TypeScript scripts (e.g., seeding)
+## Configuration
+- Environment variables securely manage Firebase keys for both client (`NEXT_PUBLIC_FIREBASE_*`) and Admin SDK (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`).

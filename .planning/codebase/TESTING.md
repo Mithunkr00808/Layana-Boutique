@@ -1,11 +1,10 @@
-# Testing Reference
+# Testing State
 
-## Current Status
-> [!WARNING]
-> No automated testing framework (Jest, Vitest, Playwright, etc.) was detected in the base repository.
+## Current Ecosystem
+Currently, no formalized automatic testing framework (like Jest or Playwright) is active within the application. The project relies extensively on manual "UAT" (User Acceptance Testing) workflows to verify component mounting, routing accuracy, and database integration integrity.
 
-## Recommendations
-- **Unit Testing**: Add [Vitest](https://vitest.dev/) for testing business logic and Firebase utilities.
-- **E2E Testing**: Add [Playwright](https://playwright.dev/) to verify critical user paths such as Cart additions and Checkout.
-- **CI/CD**: Integrate test runs into the deployment pipeline to maintain boutique-level quality.
-- **Manual Verification**: Currently, validation relies on manual browser testing and `npx get-shit-done-cc` status checks.
+## Mock Fallbacks acts as Tests
+The `src/data/mockData.ts` effectively serves as a continuous integration harness. Since Firebase fetch tools in `src/lib/data.ts` conditionally fallback to `productDetailMock` when IDs mismatch or the environment forgets `FIREBASE_PROJECT_ID`, the UI can be functionally validated without external dependency stability.
+
+## Future Testing Integrations
+- Given the heavily nested Next.js React Server Components structure, E2E Testing natively (Cypress or Playwright) will likely be needed to appropriately test the Server Actions boundary calls.
