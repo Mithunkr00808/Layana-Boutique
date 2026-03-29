@@ -5,6 +5,8 @@ import { CartItemType } from "./CartItems";
 
 export default function CartSummary({ items }: { items: CartItemType[] }) {
   const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
+  const formatInr = (value: number) =>
+    `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="lg:col-span-4">
@@ -13,7 +15,7 @@ export default function CartSummary({ items }: { items: CartItemType[] }) {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)]">Subtotal</span>
-            <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">€{subtotal.toFixed(2)}</span>
+            <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">{formatInr(subtotal)}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)]">Shipping</span>
@@ -21,12 +23,12 @@ export default function CartSummary({ items }: { items: CartItemType[] }) {
           </div>
           <div className="flex justify-between items-center">
             <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)]">Estimated Tax</span>
-            <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">€0.00</span>
+            <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">₹0.00</span>
           </div>
 
           <div className="pt-6 border-t border-[var(--color-outline-variant)]/20 flex justify-between items-center mb-10">
             <span className="font-serif text-xl text-[var(--color-on-surface)]">Total</span>
-            <span className="font-serif text-2xl text-[var(--color-on-surface)]">€{subtotal.toFixed(2)}</span>
+            <span className="font-serif text-2xl text-[var(--color-on-surface)]">{formatInr(subtotal)}</span>
           </div>
 
           <button className="w-full py-5 bg-[var(--color-primary)] text-white font-sans text-xs tracking-[0.2em] uppercase transition-all active:scale-[0.98] hover:opacity-90">

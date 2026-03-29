@@ -182,7 +182,7 @@ export const cartItemsMock = [
     variant: 'Navy Melange',
     size: '38',
     quantity: 1,
-    price: '€850.00',
+    price: '₹850.00',
     rawPrice: 850.00,
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAG6JZ9PoiIL9Q51MmWlQ6PfI5faFoXJwSsPjS7wkTdTJ7z7XNffR4rsaNSX1TYAAQMuir8uif1OyKf3U9kMGI52wNAeox88cd5RpCHq9VZNBgvsjpfKJZM4xesnqAKMUqtto2M11N-kMBxV0Jbm5RGyJIJEGXJjVe3maG0xOxiHKdW0Hc7urF5ZCkCCUQKGc5KDcRpwTj3W0boethsN91vr1QkmBUn7BLhH6vQE9otu0SMfqoQpgEuy55iWQspVaE4YDQ6d5HQl_EJ',
     alt: 'Minimalist high-end wool blazer flat lay'
@@ -193,7 +193,7 @@ export const cartItemsMock = [
     variant: 'Ivory',
     size: 'S',
     quantity: 1,
-    price: '€420.00',
+    price: '₹420.00',
     rawPrice: 420.00,
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBCR5xzWNoKATwY5SJ626r90bXzwq0smdqs7loESHv6PJVurBtOhXSUnRzBmoNNPf0cbQJ_aKlUypvxnfeTSWMPiYMqSeUJalfrcbXpSJbx4dhqGCITACT4S_8227ItImqWjiYhQ-hI5ekGNY4T_uhx8YC-drEkcq2MvNuPNMwIly6UPDHY4JKN4ja3ks4wIvEFfo8ec85USoEbzu5PMC9Oc4rl8BZpGMGPubq8MlcbVXZTTAZT2DzKWBUXOVheMoRUk1iVpfHXTws9',
     alt: 'Delicate organic silk shirt in ivory'

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Truck, Minus, Plus, Loader2 } from "lucide-react";
 import { useTransition } from "react";
-import { updateCartItemQuantity } from "@/app/cart/actions";
+import { removeCartItem, updateCartItemQuantity } from "@/app/cart/actions";
 
 export interface CartItemType {
   id: string;
@@ -19,12 +19,20 @@ export interface CartItemType {
 
 export default function CartItems({ items }: { items: CartItemType[] }) {
   const [isPending, startTransition] = useTransition();
+  const formatInr = (value: number) =>
+    `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const handleUpdateQuantity = (id: string, currentQty: number, change: number) => {
     const newQty = currentQty + change;
     if (newQty < 1) return; // Prevent going to 0 structurally for now
     startTransition(async () => {
       await updateCartItemQuantity(id, newQty);
+    });
+  };
+
+  const handleRemove = (id: string) => {
+    startTransition(async () => {
+      await removeCartItem(id);
     });
   };
 
@@ -55,7 +63,11 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
               <div>
                 <h3 className="font-serif text-lg text-[var(--color-on-surface)] mb-1">{item.name}</h3>
                 <p className="font-sans text-xs text-[var(--color-secondary)] tracking-wide uppercase">{item.variant}</p>
-                <button className="mt-4 font-sans text-[10px] tracking-widest uppercase text-[var(--color-secondary)] hover:text-[var(--color-error)] transition-colors">
+                <button
+                  onClick={() => handleRemove(item.id)}
+                  disabled={isPending}
+                  className="mt-4 font-sans text-[10px] tracking-widest uppercase text-[var(--color-secondary)] hover:text-[var(--color-error)] transition-colors disabled:opacity-40"
+                >
                   Remove
                 </button>
               </div>
@@ -83,7 +95,7 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
               </button>
             </div>
             
-            <div className="text-right font-serif text-lg">{item.price}</div>
+            <div className="text-right font-serif text-lg">{formatInr(item.rawPrice)}</div>
           </div>
         ))}
       </div>
