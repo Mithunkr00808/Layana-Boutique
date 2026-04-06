@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Footer from "@/components/FooterDynamic";
 import AccountSidebar from "@/components/AccountSidebar";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { db } from "@/lib/firebase/config";
