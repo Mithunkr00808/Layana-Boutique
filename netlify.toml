@@ -1,0 +1,11 @@
+[build.environment]
+  # Omit public identifiers from secret scanning to prevent False Positives
+  # These values are often bundled in client JS (NEXT_PUBLIC_*) and are NOT true secrets
+  SECRETS_SCAN_OMIT_KEYS = "RAZORPAY_KEY_ID, NEXT_PUBLIC_RAZORPAY_KEY_ID, NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_APP_ID, NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, NEXT_PUBLIC_FIREBASE_API_KEY"
+  
+  # Omit the planning directory entirely from the scanner
+  SECRETS_SCAN_OMIT_PATHS = ".planning/*"
+
+[build]
+  command = "npm run build"
+  publish = ".next"

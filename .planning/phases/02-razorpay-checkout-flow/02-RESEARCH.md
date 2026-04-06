@@ -13,8 +13,8 @@
 
 ### Environment Variables Needed
 ```
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_xxxx    # Exposed to client (key_id only)
-RAZORPAY_KEY_SECRET=xxxx                      # Server-only, NEVER exposed
+NEXT_PUBLIC_RAZORPAY_KEY_ID=YOUR_RAZORPAY_KEY_ID    # Exposed to client (key_id only)
+RAZORPAY_KEY_SECRET=YOUR_RAZORPAY_KEY_SECRET                      # Server-only, NEVER exposed
 ```
 
 ## Codebase Integration Points

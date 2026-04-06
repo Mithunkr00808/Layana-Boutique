@@ -43,9 +43,9 @@ export const razorpay = new Razorpay({
 ```
 3. Add to `.env.local`:
 ```
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_placeholder
-RAZORPAY_KEY_ID=rzp_test_placeholder
-RAZORPAY_KEY_SECRET=placeholder_secret
+NEXT_PUBLIC_RAZORPAY_KEY_ID=YOUR_RAZORPAY_KEY_ID
+RAZORPAY_KEY_ID=YOUR_RAZORPAY_KEY_ID
+RAZORPAY_KEY_SECRET=YOUR_RAZORPAY_KEY_SECRET
 ```
 Note: `NEXT_PUBLIC_RAZORPAY_KEY_ID` is the client-exposed key_id. `RAZORPAY_KEY_SECRET` is server-only.
 </action>
