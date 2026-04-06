@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion, type Variants, useReducedMotion } from "framer-motion";
 import { ReactNode } from "react";
 
 interface FadeInProps {
@@ -11,6 +11,9 @@ interface FadeInProps {
 }
 
 export default function FadeIn({ children, delay = 0, direction = "up", className = "" }: FadeInProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const shouldBypassAnimation = Boolean(prefersReducedMotion);
+
   const directionOffset = 40;
   const variants: Variants = {
     hidden: {
@@ -32,9 +35,8 @@ export default function FadeIn({ children, delay = 0, direction = "up", classNam
 
   return (
     <motion.div
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-100px" }}
+      initial={shouldBypassAnimation ? "visible" : "hidden"}
+      animate="visible"
       variants={variants}
       className={className}
     >

@@ -11,6 +11,10 @@ export interface JournalArticle {
 }
 
 export default function JournalPreview({ articles }: { articles: JournalArticle[] }) {
+  if (articles.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-24 bg-[var(--color-surface)] max-w-[1440px] mx-auto px-10">
       <div className="text-center mb-20">

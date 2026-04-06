@@ -51,7 +51,7 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
         {items.map((item) => (
           <div key={item.id} className="grid grid-cols-6 items-center py-10 border-b border-[var(--color-outline-variant)]/10 group">
             <div className="col-span-3 flex items-center gap-8">
-              <div className="w-24 h-32 bg-[var(--color-surface-container-low)] overflow-hidden shrink-0">
+              <div className="w-24 h-32 rounded-[20px] bg-[var(--color-surface-container-low)] overflow-hidden shrink-0">
                 <Image
                   src={item.image}
                   alt={item.alt}

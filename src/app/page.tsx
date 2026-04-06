@@ -1,9 +1,9 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import NewArrivals from "@/components/NewArrivals";
-import EditorialReveal from "@/components/EditorialReveal";
+
 import JournalPreview from "@/components/JournalPreview";
-import Footer from "@/components/Footer";
+import Footer from "@/components/FooterWithData";
 import FadeIn from "@/components/FadeIn";
 import { getNewArrivals, getJournalArticles } from "@/lib/data";
 
@@ -18,15 +18,17 @@ export default async function Home() {
         <FadeIn delay={0.1}>
           <Hero />
         </FadeIn>
-        <FadeIn delay={0.2}>
-          <NewArrivals products={newArrivals} />
-        </FadeIn>
-        <FadeIn>
-          <EditorialReveal />
-        </FadeIn>
-        <FadeIn>
-          <JournalPreview articles={articles} />
-        </FadeIn>
+        {newArrivals.length > 0 ? (
+          <FadeIn delay={0.2}>
+            <NewArrivals products={newArrivals} />
+          </FadeIn>
+        ) : null}
+
+        {articles.length > 0 ? (
+          <FadeIn>
+            <JournalPreview articles={articles} />
+          </FadeIn>
+        ) : null}
       </main>
       <Footer />
     </div>

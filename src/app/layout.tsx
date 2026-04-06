@@ -23,14 +23,14 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Atelier Noir — Premium Fashion House",
-    template: "%s | Atelier Noir",
+    default: "Layana Boutique — Premium Fashion House",
+    template: "%s | Layana Boutique",
   },
-  description: "A digital atelier for premium luxury fashion, bags, and clothing.",
+  description: "Layana Boutique — curating the future of conscious luxury fashion.",
   openGraph: {
-    title: "Atelier Noir",
-    description: "A digital atelier for premium luxury fashion, bags, and clothing.",
-    siteName: "Atelier Noir",
+    title: "Layana Boutique",
+    description: "Layana Boutique — curating the future of conscious luxury fashion.",
+    siteName: "Layana Boutique",
   },
 };
 

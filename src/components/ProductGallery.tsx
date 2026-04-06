@@ -1,67 +1,66 @@
 "use client";
 
 import Image from "next/image";
+import type { ProductMedia } from "@/types/product-media";
 
-interface ImageProps {
-  src: string;
-  alt: string;
-  type: string;
+function getLayoutClass(index: number) {
+  if (index === 0) {
+    return "col-span-2 aspect-[3/4]";
+  }
+
+  if (index === 1 || index === 2) {
+    return "col-span-1 aspect-[3/4]";
+  }
+
+  return "col-span-2 aspect-[3/4]";
 }
 
-export default function ProductGallery({ images }: { images: ImageProps[] }) {
+function MediaCard({ media, priority }: { media: ProductMedia; priority?: boolean }) {
+  const isVideo = media.resourceType === "video";
+
   return (
-    <div className="md:col-span-7 space-y-10">
-      {/* 1. Large Image */}
-      {images[0] && (
-        <div className="aspect-[3/4] overflow-hidden bg-[var(--color-surface-container-low)]">
-          <Image
-            src={images[0].src}
-            alt={images[0].alt}
-            width={800}
-            height={1066}
-            className="w-full h-full object-cover"
-          />
-        </div>
+    <div className="h-full w-full rounded-[20px] overflow-hidden bg-[var(--color-surface-container-low)]">
+      {isVideo ? (
+        <video
+          src={media.src}
+          poster={media.poster}
+          controls
+          playsInline
+          preload="metadata"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <Image
+          src={media.src}
+          alt={media.alt}
+          width={800}
+          height={1066}
+          priority={priority}
+          className="h-full w-full object-cover"
+        />
       )}
+    </div>
+  );
+}
 
-      {/* 2. Half Images */}
-      <div className="grid grid-cols-2 gap-10">
-        {images[1] && (
-          <div className="aspect-[3/4] overflow-hidden bg-[var(--color-surface-container-low)]">
-            <Image
-              src={images[1].src}
-              alt={images[1].alt}
-              width={400}
-              height={533}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-        {images[2] && (
-          <div className="aspect-[3/4] overflow-hidden bg-[var(--color-surface-container-low)]">
-            <Image
-              src={images[2].src}
-              alt={images[2].alt}
-              width={400}
-              height={533}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+export default function ProductGallery({ images }: { images: ProductMedia[] }) {
+  if (!images.length) {
+    return (
+      <div className="space-y-10 md:col-span-7">
+        <div className="aspect-[3/4] overflow-hidden bg-[var(--color-surface-container-low)]" />
       </div>
+    );
+  }
 
-      {/* 3. Large Image */}
-      {images[3] && (
-        <div className="aspect-[3/4] overflow-hidden bg-[var(--color-surface-container-low)]">
-          <Image
-            src={images[3].src}
-            alt={images[3].alt}
-            width={800}
-            height={1066}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
+  return (
+    <div className="space-y-10 md:col-span-7">
+      <div className="grid grid-cols-2 gap-10">
+        {images.map((media, index) => (
+          <div key={`${media.publicId || media.src}-${index}`} className={getLayoutClass(index)}>
+            <MediaCard media={media} priority={index === 0} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

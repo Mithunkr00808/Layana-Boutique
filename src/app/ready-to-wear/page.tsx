@@ -1,14 +1,15 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Footer from "@/components/FooterWithData";
 import ProductGrid from "@/components/ProductGrid";
 import FadeIn from "@/components/FadeIn";
 import { getReadyToWearProducts } from "@/lib/data";
+import { Suspense } from "react";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Ready-to-Wear",
-  description: "A curated selection of archival silhouettes and modern essentialism.",
+  title: "Collections",
+  description: "Explore Sarees, Kurties, and Kids Wear from the Layana Boutique catalog.",
 };
 
 export default async function ReadyToWearPage({
@@ -32,20 +33,22 @@ export default async function ReadyToWearPage({
         <FadeIn direction="up">
           <header className="py-20 md:py-32 max-w-4xl">
             <h1 className="font-serif text-5xl md:text-7xl font-light tracking-tight text-[var(--color-on-surface)] mb-6">
-              Ready-to-Wear
+              Shop Layana Boutique
             </h1>
             <p className="font-sans text-lg text-[var(--color-secondary)] leading-relaxed max-w-2xl">
-              A curated selection of archival silhouettes and modern essentialism. Our garments are crafted with the precision of a master tailor and the soul of a gallery piece.
+              Discover the latest Sarees, Kurties, and Kids Wear, curated with the same editorial focus and craftsmanship that defines the Layana Boutique collection.
             </p>
           </header>
         </FadeIn>
 
-        <ProductGrid
-          products={products}
-          activeCategory={filters.category}
-          activeSize={filters.size}
-          activeQuery={filters.query}
-        />
+        <Suspense fallback={<div className="pb-40 text-sm text-[var(--color-secondary)]">Loading catalog...</div>}>
+          <ProductGrid
+            products={products}
+            activeCategory={filters.category}
+            activeSize={filters.size}
+            activeQuery={filters.query}
+          />
+        </Suspense>
       </main>
       <Footer />
     </div>

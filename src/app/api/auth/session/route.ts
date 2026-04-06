@@ -9,26 +9,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing ID Token' }, { status: 400 });
     }
 
+    // Verify token to check for admin claim
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const isAdmin = !!decodedToken.admin;
+
     // Set session expiration to 5 days.
     const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
-    // Create the session cookie. This will also verify the ID token in the process.
-    // The session cookie will have the same claims as the ID token.
+    // Create the session cookie.
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
-    // Set cookie policy for session cookie.
-    const options = {
-      name: 'session',
-      value: sessionCookie,
-      maxAge: expiresIn,
+    const response = NextResponse.json({ status: 'success', isAdmin }, { status: 200 });
+    
+    response.cookies.set('session', sessionCookie, {
+      maxAge: expiresIn / 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       path: '/',
-      sameSite: 'lax' as const
-    };
+      sameSite: 'lax'
+    });
 
-    const response = NextResponse.json({ status: 'success' }, { status: 200 });
-    response.cookies.set(options);
+    response.cookies.set('isAdmin', isAdmin.toString(), {
+      maxAge: expiresIn / 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      sameSite: 'lax'
+    });
     
     return response;
   } catch (error) {

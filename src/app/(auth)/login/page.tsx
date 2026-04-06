@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -17,7 +17,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
@@ -42,7 +42,7 @@ export default function LoginPage() {
         if (ref.origin === window.location.origin) {
           return `${ref.pathname}${ref.search}`;
         }
-      } catch (e) {
+      } catch {
         // ignore parsing errors
       }
     }
@@ -75,7 +75,7 @@ export default function LoginPage() {
       }
 
       router.push(redirectTarget);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setError("Invalid email or password. Please try again.");
     } finally {
@@ -175,7 +175,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-zinc-500">
-                  New to Atelier Noir?
+                  New to Layana Boutique?
                 </span>
               </div>
             </div>
@@ -192,5 +192,21 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoginPageFallback() {
+  return (
+    <div className="min-h-[80vh] flex items-center justify-center bg-[#fbf9f8]">
+      <p className="text-sm text-zinc-500">Loading sign in…</p>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

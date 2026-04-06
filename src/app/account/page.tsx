@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Footer from "@/components/FooterWithData";
 import AccountSidebar from "@/components/AccountSidebar";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";

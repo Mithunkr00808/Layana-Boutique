@@ -5,11 +5,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  PRODUCT_CATEGORY_OPTIONS,
+  SHOP_CATALOG_PATH,
+} from "@/lib/catalog/categories";
 
 export interface GridProduct {
   id: string;
   name: string;
   price: string;
+  discountPrice?: string;
+  quantity?: number;
   options?: string;
   image: string;
   alt: string;
@@ -31,13 +37,22 @@ export default function ProductGrid({
   const [searchText, setSearchText] = useState(activeQuery || "");
 
   const setParam = (key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
+    const params = new URLSearchParams(searchParams.toString());
     if (value) {
       params.set(key, value);
     } else {
       params.delete(key);
     }
-    router.push(`/ready-to-wear?${params.toString()}`);
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+
+    if (nextQuery === currentQuery) {
+      return;
+    }
+
+    const nextHref = nextQuery ? `${SHOP_CATALOG_PATH}?${nextQuery}` : SHOP_CATALOG_PATH;
+    router.replace(nextHref);
   };
 
   // Debounce search updates to avoid chatty router pushes
@@ -66,11 +81,11 @@ export default function ProductGrid({
               onChange={(e) => setParam("category", e.target.value || null)}
             >
               <option value="">All Categories</option>
-              <option value="ready-to-wear">Ready to Wear</option>
-              <option value="new-arrivals">New Arrivals</option>
-              <option value="outerwear">Outerwear</option>
-              <option value="knitwear">Knitwear</option>
-              <option value="dresses">Dresses</option>
+              {PRODUCT_CATEGORY_OPTIONS.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
             </select>
             <select
               className="text-[var(--color-secondary)] bg-transparent border-b border-[var(--color-outline-variant)]/50 focus:outline-none"
@@ -111,7 +126,7 @@ export default function ProductGrid({
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-20 mb-40">
         {products.map((product) => (
           <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer block">
-            <div className="relative overflow-hidden bg-[var(--color-surface-low)] aspect-[3/4] mb-6">
+            <div className="relative overflow-hidden rounded-[20px] bg-[var(--color-surface-low)] aspect-[3/4] mb-6">
               <Image
                 src={product.image}
                 alt={product.alt}
@@ -129,17 +144,37 @@ export default function ProductGrid({
               </div>
             </div>
             <div className="space-y-1">
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-4">
                 <h3 className="font-serif text-lg italic text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors">
                   {product.name}
                 </h3>
-                <span className="font-sans text-sm font-medium">
-                  {product.price}
-                </span>
+                <div className="flex flex-col items-end">
+                  {product.discountPrice ? (
+                    <>
+                      <span className="font-sans text-sm font-medium text-[var(--color-primary)]">
+                        {product.discountPrice}
+                      </span>
+                      <span className="font-sans text-xs font-light line-through text-[var(--color-on-surface-variant)]">
+                        {product.price}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-sans text-sm font-medium">
+                      {product.price}
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-[var(--color-secondary)]">
-                {product.options}
-              </p>
+              <div className="flex justify-between items-center">
+                <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-[var(--color-secondary)]">
+                  {product.options}
+                </p>
+                {product.quantity === 0 && (
+                  <span className="font-sans text-[9px] uppercase font-bold tracking-widest text-[var(--color-error)] border border-[var(--color-error)] px-2 py-0.5 rounded-full">
+                    Out of Stock
+                  </span>
+                )}
+              </div>
             </div>
           </Link>
         ))}

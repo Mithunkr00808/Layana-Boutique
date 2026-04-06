@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 
 export async function POST() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session")?.value;
   const guestId = cookieStore.get("guestId")?.value;
 

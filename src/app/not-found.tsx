@@ -16,7 +16,7 @@ export default function NotFound() {
         href="/"
         className="px-10 py-4 bg-[var(--color-primary)] text-white text-xs tracking-[0.2em] uppercase font-semibold transition-all active:scale-95 hover:opacity-90"
       >
-        Return to Atelier
+        Return to Layana Boutique
       </Link>
     </div>
   );

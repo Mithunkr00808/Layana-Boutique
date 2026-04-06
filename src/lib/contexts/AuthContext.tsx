@@ -1,17 +1,19 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, onIdTokenChanged } from 'firebase/auth';
+import { User, onIdTokenChanged, getIdTokenResult } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 
 interface AuthContextType {
   user: User | null;
+  isAdmin: boolean;
   loading: boolean;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  isAdmin: false,
   loading: true,
   logout: async () => {},
 });
@@ -20,17 +22,18 @@ export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (user) => {
-      setUser(user);
-      setLoading(false);
-
-      if (user) {
+    const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
+      if (currentUser) {
         try {
+          // Check for admin claim
+          const tokenResult = await getIdTokenResult(currentUser);
+
           // Get the ID token from Firebase Client SDK
-          const idToken = await user.getIdToken();
+          const idToken = await currentUser.getIdToken();
           
           // Send it to our API Route to set the HTTP-only session cookie
           await fetch('/api/auth/session', {
@@ -43,13 +46,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Migrate any guest cart to this user
           await fetch('/api/cart/migrate', { method: 'POST' });
+
+          setIsAdmin(!!tokenResult.claims.admin);
+          setUser(currentUser);
         } catch (error) {
           console.error("Failed to sync session cookie:", error);
+          setUser(null);
+          setIsAdmin(false);
         }
       } else {
+        setUser(null);
+        setIsAdmin(false);
         // User is logged out, clear the session cookie
         await fetch('/api/auth/logout', { method: 'POST' });
       }
+      
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -65,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

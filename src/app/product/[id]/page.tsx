@@ -4,12 +4,19 @@ import ProductGallery from "@/components/ProductGallery";
 import ProductDetails from "@/components/ProductDetails";
 import RelatedProducts from "@/components/RelatedProducts";
 import { getProductDetail, getRelatedProducts } from "@/lib/data";
+import { notFound } from "next/navigation";
 
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const product = await getProductDetail(id);
+
+  if (!product) {
+    return {
+      title: "Product Not Found",
+    };
+  }
   
   return {
     title: product.name,
@@ -21,8 +28,17 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   
   const product = await getProductDetail(id);
+
+  if (!product) {
+    notFound();
+  }
+
   const related = await getRelatedProducts();
-  const primaryImage = product.images?.[0]?.src || "";
+  const primaryMedia = product.images?.[0];
+  const primaryImage =
+    primaryMedia?.resourceType === "video"
+      ? primaryMedia.poster || ""
+      : primaryMedia?.src || "";
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -32,7 +48,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <ProductGallery images={product.images} />
           <ProductDetails {...product} id={product.id} primaryImage={primaryImage} />
         </div>
-        <RelatedProducts products={related} />
+        {related.length > 0 ? <RelatedProducts products={related} /> : null}
       </main>
       <Footer />
     </div>

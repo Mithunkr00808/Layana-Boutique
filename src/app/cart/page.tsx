@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Footer from "@/components/FooterWithData";
 import CartItems from "@/components/CartItems";
 import CartSummary from "@/components/CartSummary";
 import { getCartItemsForUser } from "@/lib/data";

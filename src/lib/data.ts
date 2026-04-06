@@ -1,14 +1,12 @@
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { cookies } from 'next/headers';
 import { adminAuth, adminDb } from './firebase/admin';
+import { buildCloudinaryVideoPosterUrl } from './cloudinary';
 import {
-  newArrivals,
-  readyToWearProducts,
-  journalArticles,
-  productDetailMock,
-  relatedProducts,
-  cartItemsMock,
-} from '@/data/mockData';
+  DEFAULT_PRODUCT_CATEGORY,
+  isKnownProductCategory,
+} from './catalog/categories';
+import type { ProductMedia } from '@/types/product-media';
 
 // ── Type definitions ────────────────────────────────────────────────────────
 
@@ -17,6 +15,8 @@ export interface Product {
   category?: string;
   name: string;
   price: string;
+  discountPrice?: string;
+  quantity: number;
   image: string;
   alt: string;
   isLimited?: boolean;
@@ -32,12 +32,6 @@ export interface Article {
   alt: string;
 }
 
-export interface ProductImage {
-  src: string;
-  alt: string;
-  type: string;
-}
-
 export interface ProductSize {
   label: string;
   available: boolean;
@@ -49,10 +43,13 @@ export interface ProductDetail {
   categoryPath: string;
   name: string;
   price: string;
+  discountPrice?: string;
+  quantity: number;
+  hasSizes?: boolean;
   description: string;
   materials: string[];
   sustainability: string;
-  images: ProductImage[];
+  images: ProductMedia[];
   sizes: ProductSize[];
 }
 
@@ -95,125 +92,225 @@ export interface Order {
   createdAt: any; // Firestore Timestamp
 }
 
+function normalizeProductMediaArray(images: unknown): ProductMedia[] {
+  if (!Array.isArray(images)) {
+    return [];
+  }
+
+  return images
+    .filter((item): item is Partial<ProductMedia> => Boolean(item && typeof item === 'object'))
+    .map((item, index) => {
+      const resourceType = item.resourceType === 'video' ? 'video' : 'image';
+      const poster =
+        resourceType === 'video'
+          ? item.poster || (item.publicId ? buildCloudinaryVideoPosterUrl(item.publicId) : undefined)
+          : undefined;
+
+      return {
+        src: item.src || '',
+        alt: item.alt || `Product media ${index + 1}`,
+        type: item.type || (index === 1 || index === 2 ? 'half' : 'large'),
+        resourceType,
+        publicId: item.publicId,
+        poster,
+        format: item.format,
+        width: item.width,
+        height: item.height,
+        bytes: item.bytes,
+        duration: item.duration,
+      };
+    })
+    .filter((item) => Boolean(item.src));
+}
+
+function extractTimestampMillis(value: unknown): number {
+  if (value && typeof value === 'object') {
+    if ('toDate' in value && typeof value.toDate === 'function') {
+      return value.toDate().getTime();
+    }
+
+    if ('seconds' in value && typeof value.seconds === 'number') {
+      return value.seconds * 1000;
+    }
+  }
+
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+}
+
+function formatIndianPrice(price: unknown): string {
+  if (!price || typeof price !== 'string') return '₹0.00';
+  
+  const numeric = parseFloat(price.replace(/[^\d.]/g, ""));
+  if (isNaN(numeric)) {
+    return price.replace('$', '₹');
+  }
+  return `₹${numeric.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function mapProductDoc(doc: DocumentSnapshot): Product {
+  const data = doc.data() as any;
+
+  return {
+    id: doc.id,
+    category: data?.category || '',
+    name: data?.name || '',
+    price: formatIndianPrice(data?.price),
+    discountPrice: data?.discountPrice ? formatIndianPrice(data.discountPrice) : undefined,
+    quantity: data?.quantity || 0,
+    image: data?.image || '',
+    alt: data?.alt || '',
+    isLimited: data?.isLimited || false,
+    options: data?.options || '',
+  };
+}
+
 // ── Data fetching functions ─────────────────────────────────────────────────
 
 export async function getNewArrivals(): Promise<Product[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return newArrivals;
+    return [];
   }
 
   try {
-    const snapshot = await adminDb.collection('products')
-      .where('category', '==', 'new-arrivals')
-      .get();
+    const snapshot = await adminDb.collection('products').get();
 
-    if (snapshot.empty) return newArrivals;
+    if (snapshot.empty) return [];
 
-    return snapshot.docs.map(doc => doc.data() as Product);
+    return snapshot.docs
+      .map((doc) => ({
+        product: mapProductDoc(doc),
+        sortValue: Math.max(
+          extractTimestampMillis(doc.data()?.updatedAt),
+          extractTimestampMillis(doc.data()?.createdAt)
+        ),
+      }))
+      .sort((a, b) => b.sortValue - a.sortValue)
+      .slice(0, 3)
+      .map(({ product }) => product);
   } catch (error) {
-    console.error('Failed to fetch new arrivals from Firebase, falling back to mock data:', error);
-    return newArrivals;
+    console.error('Failed to fetch new arrivals from Firebase:', error);
+    return [];
   }
 }
 
 export async function getReadyToWearProducts(filters?: { category?: string | null; size?: string | null; query?: string | null }): Promise<Product[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return readyToWearProducts.filter((p) => {
-      const categoryValue = (p as any).category ? String((p as any).category) : '';
-      const categoryOk = filters?.category ? categoryValue.toLowerCase().includes(filters.category.toLowerCase()) : true;
-      const sizeOk = filters?.size
-        ? (p.options || '').toLowerCase().includes(filters.size.toLowerCase()) ||
-          categoryValue.toLowerCase().includes(filters.size.toLowerCase())
-        : true;
-      const queryOk = filters?.query
-        ? [p.name, p.options, categoryValue].some((field) =>
-            (field || '').toLowerCase().includes(filters.query!.toLowerCase())
-          )
-        : true;
-      return categoryOk && sizeOk && queryOk;
-    });
+    return [];
   }
 
   try {
-    let query: FirebaseFirestore.Query = adminDb.collection('products').where('category', '==', 'ready-to-wear');
+    const snapshot = await adminDb.collection('products').get();
 
-    if (filters?.category) {
-      query = adminDb.collection('products').where('category', '==', filters.category);
+    if (snapshot.empty) return [];
+
+    let products = snapshot.docs.map(mapProductDoc);
+
+    if (filters?.category && isKnownProductCategory(filters.category)) {
+      products = products.filter((product) => product.category === filters.category);
     }
-
-    const snapshot = await query.get();
-
-    if (snapshot.empty) return readyToWearProducts;
-
-    const products = snapshot.docs.map(doc => doc.data() as Product);
 
     if (filters?.size) {
       const sizeLower = filters.size.toLowerCase();
-      return products.filter((p) => (p.options || '').toLowerCase().includes(sizeLower));
+      products = products.filter((product) => (product.options || '').toLowerCase().includes(sizeLower));
     }
 
     if (filters?.query) {
       const q = filters.query.toLowerCase();
-      return products.filter((p) =>
-        [p.name, p.options, (p as any).category || ""].some((field) => (field || "").toLowerCase().includes(q))
+      products = products.filter((product) =>
+        [product.name, product.options, product.category || ''].some((field) =>
+          (field || '').toLowerCase().includes(q)
+        )
       );
     }
 
     return products;
   } catch (error) {
-    console.error('Failed to fetch RTW products from Firebase, falling back to mock data:', error);
-    return readyToWearProducts;
+    console.error('Failed to fetch RTW products from Firebase:', error);
+    return [];
   }
 }
 
 export async function getJournalArticles(): Promise<Article[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return journalArticles;
+    return [];
   }
 
   try {
     const snapshot = await adminDb.collection('articles').get();
-    if (snapshot.empty) return journalArticles;
+    if (snapshot.empty) return [];
 
     return snapshot.docs.map(doc => doc.data() as Article);
   } catch (error) {
-    console.error('Failed to fetch articles from Firebase, falling back to mock data:', error);
-    return journalArticles;
+    console.error('Failed to fetch articles from Firebase:', error);
+    return [];
   }
 }
 
-export async function getProductDetail(id: string): Promise<ProductDetail> {
+export async function getProductDetail(id: string): Promise<ProductDetail | null> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return productDetailMock;
+    return null;
   }
 
   try {
     let doc = await adminDb.collection('productDetails').doc(id).get();
 
     if (doc.exists) {
-      return doc.data() as ProductDetail;
+      const raw = doc.data() as any;
+      return {
+        id: raw.id || id,
+        sku: raw.sku || '',
+        categoryPath: raw.categoryPath || '',
+        name: raw.name || '',
+        price: formatIndianPrice(raw.price),
+        discountPrice: raw.discountPrice ? formatIndianPrice(raw.discountPrice) : undefined,
+        quantity: raw.quantity || 0,
+        description: raw.description || '',
+        materials: raw.materials || [],
+        sustainability: raw.sustainability || '',
+        images: normalizeProductMediaArray(raw.images),
+        sizes: raw.sizes || [],
+        hasSizes: raw.hasSizes ?? true,
+      };
     }
 
-    doc = await adminDb.collection('products').doc(`rtw-${id}`).get();
-    if (!doc.exists) {
-      doc = await adminDb.collection('products').doc(`new-arrival-${id}`).get();
-    }
+    doc = await adminDb.collection('products').doc(id).get();
 
     if (doc.exists) {
-      const summary = doc.data() as Product;
+      const summary = mapProductDoc(doc);
       
       return {
-        id: summary.id || id,
-        sku: `SKU-${summary.id?.toUpperCase() || id.toUpperCase()}`,
-        categoryPath: summary.category || 'Catalog',
+        id: summary.id,
+        sku: `SKU-${summary.id.toUpperCase()}`,
+        categoryPath: summary.category || DEFAULT_PRODUCT_CATEGORY,
         name: summary.name || 'Unknown Product',
-        price: summary.price || '$0.00',
+        price: summary.price,
+        discountPrice: summary.discountPrice,
+        quantity: summary.quantity,
+        hasSizes: true,
         description: summary.options 
           ? `Made from ${summary.options}. This product has not had its full description, materials, or editorial images uploaded yet.` 
           : 'Full product description is pending. Please update via the admin panel.',
         materials: ['Detail pending - Update via catalog admin'],
         sustainability: 'Sustainability tracking pending',
-        images: summary.image ? [{ src: summary.image, alt: summary.alt || summary.name || 'Product Image', type: 'large' }] : [],
+        images: summary.image
+          ? [
+              {
+                src: summary.image,
+                alt: summary.alt || summary.name || 'Product Image',
+                type: 'large',
+                resourceType: 'image',
+              },
+            ]
+          : [],
         sizes: [
           { label: 'S', available: true },
           { label: 'M', available: true },
@@ -222,26 +319,26 @@ export async function getProductDetail(id: string): Promise<ProductDetail> {
       };
     }
 
-    return productDetailMock;
+    return null;
   } catch (error) {
     console.error('Failed to fetch product detail from Firebase:', error);
-    return productDetailMock;
+    return null;
   }
 }
 
 export async function getRelatedProducts(): Promise<Product[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return relatedProducts;
+    return [];
   }
 
   try {
     const snapshot = await adminDb.collection('products').limit(4).get();
-    if (snapshot.empty) return relatedProducts;
+    if (snapshot.empty) return [];
 
-    return snapshot.docs.map(doc => doc.data() as Product);
+    return snapshot.docs.map(mapProductDoc);
   } catch (error) {
     console.error('Failed to fetch related products:', error);
-    return relatedProducts;
+    return [];
   }
 }
 
@@ -263,7 +360,7 @@ function mapCartDoc(doc: DocumentSnapshot): CartItem {
 
 export async function getCartItems(userId: string): Promise<CartItem[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return cartItemsMock;
+    return [];
   }
 
   try {
@@ -277,8 +374,8 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
 
     return snapshot.docs.map(mapCartDoc);
   } catch (error) {
-    console.error('Failed to fetch cart items for user from Firebase, falling back to mock data:', error);
-    return cartItemsMock;
+    console.error('Failed to fetch cart items for user from Firebase:', error);
+    return [];
   }
 }
 
@@ -304,7 +401,7 @@ export async function addToCart(userId: string, item: CartItem): Promise<boolean
 
 export async function getCartItemsForUser(): Promise<CartItem[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
-    return cartItemsMock;
+    return [];
   }
 
   try {
@@ -603,5 +700,38 @@ export async function getAllOrders(limit = 100): Promise<Order[]> {
   } catch (error) {
     console.error('Failed to fetch all orders:', error);
     return [];
+  }
+}
+
+// ---- Site Settings ----
+
+export interface SiteSettings {
+  hero: { imageUrl: string; alt: string };
+  social: { instagram: string; facebook: string; email: string };
+}
+
+const DEFAULT_HERO_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuD315us5QSxHnxztOXDZ8ttyjNhERsYzKjADSyBq75CASgaps_JA9zS0rdzP_dPN1bpscfJuYkI3j3-GPLU0DTyLml8mA6SPnaLUTELp3VwKIsPkI9rkDnzEPfutX5NILavsl41IXPCWWfAEgXAyOrpa75BQ0bisSsEQXH3U1vYhVjqgIHzOvZsDbN-dNmHJH8Z8qao4by3NB8hnCQnId8zey-8t0h7eOCxSG3IFcFUOPARCycg_FziDBev2QjpChOfUFlEvs9SbIa_';
+
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  hero: { imageUrl: DEFAULT_HERO_URL, alt: 'Layana Boutique — curating conscious luxury' },
+  social: { instagram: '', facebook: '', email: '' },
+};
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  if (!process.env.FIREBASE_PROJECT_ID) return DEFAULT_SITE_SETTINGS;
+  try {
+    const [heroDoc, socialDoc] = await Promise.all([
+      adminDb.collection('siteSettings').doc('hero').get(),
+      adminDb.collection('siteSettings').doc('social').get(),
+    ]);
+    const h = heroDoc.exists ? (heroDoc.data() as SiteSettings['hero']) : DEFAULT_SITE_SETTINGS.hero;
+    const s = socialDoc.exists ? (socialDoc.data() as SiteSettings['social']) : DEFAULT_SITE_SETTINGS.social;
+    return {
+      hero: { imageUrl: h.imageUrl || DEFAULT_HERO_URL, alt: h.alt || DEFAULT_SITE_SETTINGS.hero.alt },
+      social: { instagram: s.instagram || '', facebook: s.facebook || '', email: s.email || '' },
+    };
+  } catch (err) {
+    console.error('getSiteSettings error:', err);
+    return DEFAULT_SITE_SETTINGS;
   }
 }

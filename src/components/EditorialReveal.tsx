@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { SHOP_CATALOG_PATH } from "@/lib/catalog/categories";
 
 export default function EditorialReveal() {
   return (
@@ -34,7 +35,7 @@ export default function EditorialReveal() {
                 An exploration of form and structure. Discover the collection that redefines the boundaries of modern tailoring through the lens of architectural geometry.
               </p>
               <Link
-                href="/collections/winter-2024"
+                href={SHOP_CATALOG_PATH}
                 className="group inline-flex items-center gap-4 font-sans text-xs tracking-widest uppercase text-[var(--color-on-surface)] font-bold"
               >
                 Explore Collection

@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Footer from "@/components/FooterWithData";
 import CheckoutClient from "./CheckoutClient";
 import { getCartItemsForUser, getUserAddresses } from "@/lib/data";
 import { redirect } from "next/navigation";
