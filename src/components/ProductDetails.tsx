@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { ChevronDown, Store } from "lucide-react";
-import { addCartItem } from "@/app/cart/actions";
+import { useMemo, useState, useTransition, useEffect } from "react";
+import { ChevronDown, Minus, Plus } from "lucide-react";
+import { addCartItem, getCartItemQuantity, updateCartItemQuantity, removeCartItem } from "@/app/cart/actions";
 import { formatProductCategory } from "@/lib/catalog/categories";
 
 interface SizeProps {
@@ -33,6 +33,17 @@ export default function ProductDetails(props: ProductDetailsProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(initialSize);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string>("");
+  const [cartQuantity, setCartQuantity] = useState<number>(0);
+
+  const effectiveSize = props.hasSizes === false ? "One Size" : (selectedSize || "");
+
+  useEffect(() => {
+    async function fetchQuantity() {
+      const qty = await getCartItemQuantity(props.id, effectiveSize);
+      setCartQuantity(qty);
+    }
+    fetchQuantity();
+  }, [props.id, effectiveSize]);
 
   const numericPrice = useMemo(() => {
     const numeric = parseFloat((props.price || "").replace(/[^\d.]/g, ""));
@@ -51,7 +62,7 @@ export default function ProductDetails(props: ProductDetailsProps) {
         productId: props.id,
         name: props.name,
         variant: props.categoryPath,
-        size: props.hasSizes === false ? "One Size" : (selectedSize || ""),
+        size: effectiveSize,
         price: numericPrice,
         priceDisplay,
         image: props.primaryImage || "",
@@ -62,8 +73,28 @@ export default function ProductDetails(props: ProductDetailsProps) {
         setMessage("Could not add to bag. Please try again.");
       } else {
           setMessage("Added to bag");
+          setCartQuantity(prev => prev + 1);
       }
     });
+  };
+
+  const handleUpdateQuantity = (newQty: number) => {
+      setMessage("");
+      startTransition(async () => {
+          const docId = `${props.id}-${effectiveSize || "onesize"}`;
+          let success = false;
+          if (newQty <= 0) {
+              success = await removeCartItem(docId);
+              if (success) setCartQuantity(0);
+          } else {
+              success = await updateCartItemQuantity(docId, newQty);
+              if (success) setCartQuantity(newQty);
+          }
+
+          if (!success) {
+              setMessage("Could not update quantity. Please try again.");
+          }
+      });
   };
 
   return (
@@ -141,17 +172,37 @@ export default function ProductDetails(props: ProductDetailsProps) {
 
         {/* CTA */}
         <div className="pt-6 space-y-4">
-          <button
-            onClick={handleAddToCart}
-            disabled={isPending || !numericPrice || props.quantity === 0}
-            className="w-full bg-[var(--color-primary)] text-[var(--color-on-primary)] py-5 rounded-sm font-sans text-xs uppercase tracking-widest transition-all active:scale-[0.99] hover:opacity-90 disabled:opacity-50"
-          >
-            {props.quantity === 0 ? "OUT OF STOCK" : (isPending ? "Adding..." : "Add to Bag")}
-          </button>
-          <button className="w-full flex items-center justify-center gap-2 py-5 border border-[var(--color-outline-variant)]/30 font-sans text-xs uppercase tracking-widest hover:bg-[var(--color-surface-container-high)] transition-colors">
-            <Store strokeWidth={1.5} size={18} />
-            Find in Store
-          </button>
+          {cartQuantity > 0 ? (
+            <div className="flex items-center gap-4">
+               <div className="flex-1 flex items-center justify-between border border-[var(--color-outline-variant)]/40 p-4 rounded-sm">
+                   <button
+                     onClick={() => handleUpdateQuantity(cartQuantity - 1)}
+                     disabled={isPending}
+                     className="p-1 hover:bg-[var(--color-surface-container-high)] rounded-full transition-colors disabled:opacity-50"
+                     aria-label="Decrease quantity"
+                   >
+                     <Minus size={16} strokeWidth={1.5} />
+                   </button>
+                   <span className="font-sans text-sm font-medium tabular-nums">{cartQuantity}</span>
+                   <button
+                     onClick={() => handleUpdateQuantity(cartQuantity + 1)}
+                     disabled={isPending}
+                     className="p-1 hover:bg-[var(--color-surface-container-high)] rounded-full transition-colors disabled:opacity-50"
+                     aria-label="Increase quantity"
+                   >
+                     <Plus size={16} strokeWidth={1.5} />
+                   </button>
+               </div>
+            </div>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={isPending || !numericPrice || props.quantity === 0}
+              className="w-full bg-[var(--color-primary)] text-[var(--color-on-primary)] py-5 rounded-sm font-sans text-xs uppercase tracking-widest transition-all active:scale-[0.99] hover:opacity-90 disabled:opacity-50"
+            >
+              {props.quantity === 0 ? "OUT OF STOCK" : (isPending ? "Adding..." : "Add to Bag")}
+            </button>
+          )}
           {message && (
             <p className="text-xs text-[var(--color-secondary)] font-sans">{message}</p>
           )}

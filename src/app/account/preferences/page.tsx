@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import AccountSidebar from "@/components/AccountSidebar";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { updatePreferences } from "@/app/account/actions";
 import { db } from "@/lib/firebase/config";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -110,25 +110,18 @@ export default function PreferencesPage() {
     if (!user) return;
     setSaving(true);
     try {
-      const fullName = `${values.firstName} ${values.lastName || ""}`.trim();
+      const result = await updatePreferences({
+        firstName: values.firstName,
+        lastName: values.lastName || undefined,
+        phone: values.phone,
+        visibility: !!values.visibility,
+        newsletter: !!values.newsletter,
+        twoFactor: !!values.twoFactor,
+      });
 
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          firstName: values.firstName,
-          lastName: values.lastName || "",
-          fullName,
-          email: values.email,
-          phone: values.phone,
-          preferences: {
-            visibility: !!values.visibility,
-            newsletter: !!values.newsletter,
-            twoFactor: !!values.twoFactor,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        { merge: true }
-      );
+      if (!result.success) {
+        console.error("Failed to save preferences:", result.error);
+      }
     } catch (e) {
       console.error("Failed to save preferences:", e);
     } finally {
@@ -399,8 +392,6 @@ export default function PreferencesPage() {
           </section>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

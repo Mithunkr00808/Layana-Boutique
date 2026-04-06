@@ -2,24 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import AccountSidebar from "@/components/AccountSidebar";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { db } from "@/lib/firebase/config";
-import { collection, doc, getDocs, setDoc, deleteDoc } from "firebase/firestore";
+import { getWishlistItems, removeWishlistItem } from "@/app/account/actions";
+import type { WishlistItem } from "@/app/account/actions";
 import { addCartItem } from "@/app/cart/actions";
 import { Info } from "lucide-react";
-
-type WishlistItem = {
-  id: string;
-  name: string;
-  variant?: string;
-  size?: string;
-  price?: string;
-  rawPrice?: number;
-  image?: string;
-  alt?: string;
-};
 
 export default function WishlistPage() {
   const { user, loading } = useAuth();
@@ -31,9 +19,8 @@ export default function WishlistPage() {
     async function fetchWishlist() {
       if (!user) return;
       try {
-        const snap = await getDocs(collection(db, "users", user.uid, "wishlist"));
-        const parsed: WishlistItem[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-        setItems(parsed);
+        const data = await getWishlistItems();
+        setItems(data);
       } catch (error) {
         console.error("Failed to load wishlist:", error);
       } finally {
@@ -46,8 +33,10 @@ export default function WishlistPage() {
   const removeItem = async (id: string) => {
     if (!user) return;
     try {
-      await deleteDoc(doc(db, "users", user.uid, "wishlist", id));
-      setItems((prev) => prev.filter((i) => i.id !== id));
+      const result = await removeWishlistItem(id);
+      if (result.success) {
+        setItems((prev) => prev.filter((i) => i.id !== id));
+      }
     } catch (error) {
       console.error("Failed to remove wishlist item:", error);
     }
@@ -192,8 +181,6 @@ export default function WishlistPage() {
           </section>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

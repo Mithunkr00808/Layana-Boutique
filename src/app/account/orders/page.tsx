@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/FooterWithData";
 import AccountSidebar from "@/components/AccountSidebar";
 import { getUserOrders } from "@/lib/data";
 import { cookies } from "next/headers";
@@ -169,8 +168,6 @@ export default async function OrdersPage() {
           </section>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

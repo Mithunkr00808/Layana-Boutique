@@ -15,9 +15,10 @@ export default async function Hero() {
           fill
           priority
           loading="eager"
-          className="object-cover grayscale-[20%] scale-105 hover:scale-100 transition-transform duration-[2000ms] ease-out"
+          className="object-cover grayscale-[20%] scale-105 hover:scale-100 transform-gpu will-change-transform transition-transform duration-[2000ms] ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-on-surface)]/40 to-transparent pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent opacity-80 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-on-surface)]/60 via-transparent to-transparent pointer-events-none"></div>
       </div>
       <div className="relative h-full flex flex-col justify-end items-start px-10 pb-20 max-w-[1440px] mx-auto w-full">
         <h1 className="font-serif text-5xl md:text-[5rem] leading-[0.9] text-white font-light tracking-tighter mb-8 max-w-2xl">

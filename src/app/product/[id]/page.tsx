@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import ProductGallery from "@/components/ProductGallery";
 import ProductDetails from "@/components/ProductDetails";
 import RelatedProducts from "@/components/RelatedProducts";
@@ -17,10 +16,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       title: "Product Not Found",
     };
   }
-  
   return {
-    title: product.name,
+    title: `${product.name} | Layana Boutique`,
     description: product.description,
+    openGraph: {
+      type: "website",
+      title: product.name,
+      description: product.description,
+      images: product.images?.[0] ? [{ url: product.images[0].src }] : [],
+    },
+    alternates: {
+      canonical: `/product/${id}`,
+    },
   };
 }
 
@@ -50,7 +57,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         </div>
         {related.length > 0 ? <RelatedProducts products={related} /> : null}
       </main>
-      <Footer />
     </div>
   );
 }

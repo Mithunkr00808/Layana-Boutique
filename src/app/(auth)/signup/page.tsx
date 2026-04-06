@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/lib/firebase/config";
+import { auth } from "@/lib/firebase/config";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { doc, setDoc } from "firebase/firestore";
 
 const signupSchema = z.object({
   firstName: z.string().min(2, "First name is strictly required"),
@@ -42,23 +41,20 @@ export default function SignupPage() {
         data.email,
         data.password
       );
-      
-      // Using the pre-initialized db from our config
-      
-      // Create user profile in Firestore
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        createdAt: new Date().toISOString(),
-      });
 
-      // Create session cookie for server-side middleware
+      // Create session cookie and user profile server-side
       const idToken = await userCredential.user.getIdToken(true);
       const sessionRes = await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({
+          idToken,
+          profile: {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+          },
+        }),
       });
 
       if (!sessionRes.ok) {

@@ -4,7 +4,7 @@ export default function Loading() {
       <div className="relative flex flex-col items-center gap-8">
         {/* Animated logo mark */}
         <div className="w-12 h-12 border border-[var(--color-outline-variant)]/40 animate-[spin_3s_linear_infinite]" />
-        <span className="font-serif text-xl tracking-tighter text-[var(--color-on-surface)] animate-pulse">
+        <span className="font-serif text-3xl tracking-tighter text-[var(--color-on-surface)] animate-pulse">
           Layana Boutique
         </span>
       </div>

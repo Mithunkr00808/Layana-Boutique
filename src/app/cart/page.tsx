@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/FooterWithData";
 import CartItems from "@/components/CartItems";
 import CartSummary from "@/components/CartSummary";
 import { getCartItemsForUser } from "@/lib/data";
@@ -35,7 +34,6 @@ export default async function CartPage() {
           <CartSummary items={activeCart} />
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

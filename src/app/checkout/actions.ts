@@ -116,7 +116,15 @@ async function fetchAddress(uid: string, addressId: string): Promise<Address | n
   return null;
 }
 
-export async function createOrder(addressId: string): Promise<OrderResponse> {
+const SHIPPING_COSTS: Record<string, number> = {
+  standard: 0,
+  express: 250,
+};
+
+export async function createOrder(
+  addressId: string,
+  shippingMethod: "standard" | "express" = "standard"
+): Promise<OrderResponse> {
   if (!process.env.FIREBASE_PROJECT_ID) {
     return { error: "Firebase is not configured" };
   }
@@ -132,7 +140,9 @@ export async function createOrder(addressId: string): Promise<OrderResponse> {
       return { error: "Cart is empty" };
     }
 
-    const amountPaise = Math.round(subtotal * 100);
+    const shippingCost = SHIPPING_COSTS[shippingMethod] ?? 0;
+    const total = subtotal + shippingCost;
+    const amountPaise = Math.round(total * 100);
 
     const order = await razorpay.orders.create({
       amount: amountPaise,
@@ -144,6 +154,8 @@ export async function createOrder(addressId: string): Promise<OrderResponse> {
       uid,
       items,
       subtotal,
+      shippingCost,
+      shippingMethod,
       amount: order.amount,
       currency: order.currency,
       addressId,

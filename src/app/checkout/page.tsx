@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/FooterWithData";
 import CheckoutClient from "./CheckoutClient";
 import { getCartItemsForUser, getUserAddresses } from "@/lib/data";
 import { redirect } from "next/navigation";
@@ -44,7 +43,6 @@ export default async function CheckoutPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

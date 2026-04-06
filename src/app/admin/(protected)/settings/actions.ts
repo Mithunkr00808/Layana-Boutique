@@ -2,7 +2,7 @@
 
 import { adminDb } from '@/lib/firebase/admin';
 import { uploadHeroImage } from '@/lib/cloudinary';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 export async function saveHeroSettings(formData: FormData) {
   const imageUrl = formData.get('imageUrl')?.toString().trim() || '';
@@ -15,6 +15,8 @@ export async function saveHeroSettings(formData: FormData) {
   try {
     await adminDb.collection('siteSettings').doc('hero').set({ imageUrl, alt }, { merge: true });
     revalidatePath('/');
+    // @ts-expect-error - Next.js internal type mismatch
+    revalidateTag('settings');
     return { success: true };
   } catch (err) {
     console.error('saveHeroSettings error:', err);
@@ -45,6 +47,8 @@ export async function uploadAndSaveHeroImage(formData: FormData) {
     );
 
     revalidatePath('/');
+    // @ts-expect-error - Next.js internal type mismatch
+    revalidateTag('settings');
     return { success: true, imageUrl: url };
   } catch (err) {
     console.error('uploadAndSaveHeroImage error:', err);
@@ -65,6 +69,8 @@ export async function saveSocialSettings(formData: FormData) {
   try {
     await adminDb.collection('siteSettings').doc('social').set({ instagram, facebook, email }, { merge: true });
     revalidatePath('/');
+    // @ts-expect-error - Next.js internal type mismatch
+    revalidateTag('settings');
     return { success: true };
   } catch (err) {
     console.error('saveSocialSettings error:', err);

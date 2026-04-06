@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import AccountSidebar from "@/components/AccountSidebar";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { addAddress as addAddressAction, removeAddress as removeAddressAction } from "@/app/account/actions";
 import { db } from "@/lib/firebase/config";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,11 +19,11 @@ const addressSchema = z.object({
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
   postalCode: z.string().regex(/^[1-9][0-9]{5}$/, "Must be a valid 6-digit PIN code"),
-  addressType: z.enum(["home", "work", "other"]).default("home"),
+  addressType: z.enum(["home", "work", "other"]),
 });
 
 type AddressFormValues = z.infer<typeof addressSchema>;
-type Address = AddressFormValues & { id: string };
+type Address = import("@/lib/data").Address;
 
 export default function AddressesPage() {
   const { user, loading } = useAuth();
@@ -83,23 +83,22 @@ export default function AddressesPage() {
     if (!user) return;
     setIsSubmitting(true);
     try {
-      const newAddress: Address = { ...data, id: crypto.randomUUID() };
-      const updated = [...addresses, newAddress];
-      await setDoc(doc(db, "users", user.uid), { addresses: updated }, { merge: true });
-      setAddresses(updated);
-      setIsAdding(false);
-      reset({
-        fullName: profileName || "",
-        phone: profilePhone || "",
-        streetAddress: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        addressType: "home",
-        city: "",
-        state: "",
-        addressType: "home",
-      });
+      const result = await addAddressAction(data);
+      if (result.success) {
+        setAddresses((prev) => [...prev, result.address]);
+        setIsAdding(false);
+        reset({
+          fullName: profileName || "",
+          phone: profilePhone || "",
+          streetAddress: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          addressType: "home",
+        });
+      } else {
+        console.error("Failed to save address:", result.error);
+      }
     } catch (error) {
       console.error("Failed to save address:", error);
     } finally {
@@ -110,9 +109,12 @@ export default function AddressesPage() {
   const removeAddress = async (id: string) => {
     if (!user) return;
     try {
-      const updated = addresses.filter((addr) => addr.id !== id);
-      await setDoc(doc(db, "users", user.uid), { addresses: updated }, { merge: true });
-      setAddresses(updated);
+      const result = await removeAddressAction(id);
+      if (result.success) {
+        setAddresses((prev) => prev.filter((addr) => addr.id !== id));
+      } else {
+        console.error("Failed to remove address:", result.error);
+      }
     } catch (error) {
       console.error("Failed to remove address:", error);
     }
@@ -364,8 +366,6 @@ export default function AddressesPage() {
           </section>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

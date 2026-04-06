@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/FooterWithData";
 import ProductGrid from "@/components/ProductGrid";
 import FadeIn from "@/components/FadeIn";
 import { getReadyToWearProducts } from "@/lib/data";
@@ -8,8 +7,16 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Collections",
+  title: "Collections | Layana Boutique",
   description: "Explore Sarees, Kurties, and Kids Wear from the Layana Boutique catalog.",
+  openGraph: {
+    type: "website",
+    title: "Collections | Layana Boutique",
+    description: "Explore Sarees, Kurties, and Kids Wear from the Layana Boutique catalog.",
+  },
+  alternates: {
+    canonical: `/ready-to-wear`,
+  },
 };
 
 export default async function ReadyToWearPage({
@@ -50,7 +57,6 @@ export default async function ReadyToWearPage({
           />
         </Suspense>
       </main>
-      <Footer />
     </div>
   );
 }

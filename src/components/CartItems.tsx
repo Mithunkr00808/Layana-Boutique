@@ -66,14 +66,16 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
                 <button
                   onClick={() => handleRemove(item.id)}
                   disabled={isPending}
-                  className="mt-4 font-sans text-[10px] tracking-widest uppercase text-[var(--color-secondary)] hover:text-[var(--color-error)] transition-colors disabled:opacity-40"
+                  className="mt-4 font-sans text-[10px] tracking-widest uppercase text-[var(--color-error)]/80 hover:text-[var(--color-error)] transition-colors disabled:opacity-40"
                 >
                   Remove
                 </button>
               </div>
             </div>
             
-            <div className="text-center font-sans text-sm">{item.size}</div>
+            <div className="text-center font-sans text-sm">
+              {["one size", "os"].includes(item.size.toLowerCase()) ? "" : item.size}
+            </div>
             
             <div className="flex justify-center items-center gap-4">
               <button 

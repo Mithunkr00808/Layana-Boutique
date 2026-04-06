@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/FooterWithData";
 import AccountSidebar from "@/components/AccountSidebar";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -242,8 +241,6 @@ export default async function AccountPage() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

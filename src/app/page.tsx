@@ -3,7 +3,6 @@ import Hero from "@/components/Hero";
 import NewArrivals from "@/components/NewArrivals";
 
 import JournalPreview from "@/components/JournalPreview";
-import Footer from "@/components/FooterWithData";
 import FadeIn from "@/components/FadeIn";
 import { getNewArrivals, getJournalArticles } from "@/lib/data";
 
@@ -30,7 +29,6 @@ export default async function Home() {
           </FadeIn>
         ) : null}
       </main>
-      <Footer />
     </div>
   );
 }

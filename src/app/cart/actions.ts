@@ -59,6 +59,33 @@ export async function updateCartItemQuantity(id: string, newQuantity: number) {
   }
 }
 
+export async function getCartItemQuantity(productId: string, size?: string) {
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    return 0;
+  }
+
+  try {
+    const uid = await getUidFromSession();
+    const guestId = uid ? null : await getGuestId();
+
+    const cartCollection = uid
+      ? adminDb.collection("users").doc(uid).collection("cart")
+      : adminDb.collection("guest-carts").doc(guestId as string).collection("items");
+
+    const docId = `${productId}-${size || "onesize"}`;
+    const docRef = cartCollection.doc(docId);
+    const snap = await docRef.get();
+
+    if (snap.exists) {
+      return (snap.data()?.quantity as number | undefined) ?? 0;
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error fetching cart item quantity:", error);
+    return 0;
+  }
+}
+
 export async function removeCartItem(id: string) {
   if (!process.env.FIREBASE_PROJECT_ID) {
     console.warn("No FIREBASE_PROJECT_ID found. Cannot remove cart item.");

@@ -14,7 +14,7 @@ import {
   uploadProductMedia,
 } from "@/lib/cloudinary";
 import { FieldValue } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { randomUUID } from "crypto";
 import type { ProductMedia } from "@/types/product-media";
 
@@ -222,6 +222,7 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
         alt: `${name || "Product"} cover image`,
         type: "large",
         resourceType: "image",
+        poster: undefined,
       },
     ];
   }
@@ -319,6 +320,8 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
     revalidatePath(`/product/${id}`);
+    // @ts-expect-error - Next.js internal type mismatch
+    revalidateTag("products");
 
     return { success: true, id };
   } catch (error) {
@@ -365,6 +368,8 @@ export async function deleteCatalogItem(id: string) {
     revalidatePath("/");
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
+    // @ts-expect-error - Next.js internal type mismatch
+    revalidateTag("products");
 
     return { success: true };
   } catch (error) {

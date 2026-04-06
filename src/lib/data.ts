@@ -1,4 +1,5 @@
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
+import { unstable_cache } from 'next/cache';
 import { cookies } from 'next/headers';
 import { adminAuth, adminDb } from './firebase/admin';
 import { buildCloudinaryVideoPosterUrl } from './cloudinary';
@@ -73,6 +74,7 @@ export interface Address {
   city: string;
   state: string;
   postalCode: string;
+  addressType?: "home" | "work" | "other";
 }
 
 export interface Order {
@@ -109,8 +111,8 @@ function normalizeProductMediaArray(images: unknown): ProductMedia[] {
       return {
         src: item.src || '',
         alt: item.alt || `Product media ${index + 1}`,
-        type: item.type || (index === 1 || index === 2 ? 'half' : 'large'),
-        resourceType,
+        type: (item.type || (index === 1 || index === 2 ? 'half' : 'large')) as any,
+        resourceType: resourceType as any,
         publicId: item.publicId,
         poster,
         format: item.format,
@@ -175,85 +177,99 @@ function mapProductDoc(doc: DocumentSnapshot): Product {
 
 // ── Data fetching functions ─────────────────────────────────────────────────
 
-export async function getNewArrivals(): Promise<Product[]> {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    return [];
-  }
+export const getNewArrivals = unstable_cache(
+  async (): Promise<Product[]> => {
+    if (!process.env.FIREBASE_PROJECT_ID) {
+      return [];
+    }
 
-  try {
-    const snapshot = await adminDb.collection('products').get();
+    try {
+      const snapshot = await adminDb.collection('products').get();
 
-    if (snapshot.empty) return [];
+      if (snapshot.empty) return [];
 
-    return snapshot.docs
-      .map((doc) => ({
-        product: mapProductDoc(doc),
-        sortValue: Math.max(
-          extractTimestampMillis(doc.data()?.updatedAt),
-          extractTimestampMillis(doc.data()?.createdAt)
-        ),
-      }))
-      .sort((a, b) => b.sortValue - a.sortValue)
-      .slice(0, 3)
-      .map(({ product }) => product);
-  } catch (error) {
-    console.error('Failed to fetch new arrivals from Firebase:', error);
-    return [];
-  }
-}
+      return snapshot.docs
+        .map((doc) => ({
+          product: mapProductDoc(doc),
+          sortValue: Math.max(
+            extractTimestampMillis(doc.data()?.updatedAt),
+            extractTimestampMillis(doc.data()?.createdAt)
+          ),
+        }))
+        .sort((a, b) => b.sortValue - a.sortValue)
+        .slice(0, 3)
+        .map(({ product }) => product);
+    } catch (error) {
+      console.error('Failed to fetch new arrivals from Firebase:', error);
+      return [];
+    }
+  },
+  ['new-arrivals'],
+  { tags: ['products'] }
+);
 
 export async function getReadyToWearProducts(filters?: { category?: string | null; size?: string | null; query?: string | null }): Promise<Product[]> {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    return [];
-  }
+  return unstable_cache(
+    async () => {
+      if (!process.env.FIREBASE_PROJECT_ID) {
+        return [];
+      }
 
-  try {
-    const snapshot = await adminDb.collection('products').get();
+      try {
+        const snapshot = await adminDb.collection('products').get();
 
-    if (snapshot.empty) return [];
+        if (snapshot.empty) return [];
 
-    let products = snapshot.docs.map(mapProductDoc);
+        let products = snapshot.docs.map(mapProductDoc);
 
-    if (filters?.category && isKnownProductCategory(filters.category)) {
-      products = products.filter((product) => product.category === filters.category);
-    }
+        if (filters?.category && isKnownProductCategory(filters.category)) {
+          products = products.filter((product) => product.category === filters.category);
+        }
 
-    if (filters?.size) {
-      const sizeLower = filters.size.toLowerCase();
-      products = products.filter((product) => (product.options || '').toLowerCase().includes(sizeLower));
-    }
+        if (filters?.size) {
+          const sizeLower = filters.size.toLowerCase();
+          products = products.filter((product) => (product.options || '').toLowerCase().includes(sizeLower));
+        }
 
-    if (filters?.query) {
-      const q = filters.query.toLowerCase();
-      products = products.filter((product) =>
-        [product.name, product.options, product.category || ''].some((field) =>
-          (field || '').toLowerCase().includes(q)
-        )
-      );
-    }
+        if (filters?.query) {
+          const q = filters.query.toLowerCase();
+          products = products.filter((product) =>
+            [product.name, product.options, product.category || ''].some((field) =>
+              (field || '').toLowerCase().includes(q)
+            )
+          );
+        }
 
-    return products;
-  } catch (error) {
-    console.error('Failed to fetch RTW products from Firebase:', error);
-    return [];
-  }
+        return products;
+      } catch (error) {
+        console.error('Failed to fetch RTW products from Firebase:', error);
+        return [];
+      }
+    },
+    ['ready-to-wear', filters?.category || 'all', filters?.size || 'all', filters?.query || 'none'],
+    { tags: ['products'] }
+  )();
 }
 
-export async function getJournalArticles(): Promise<Article[]> {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    return [];
-  }
+export const getJournalArticles = unstable_cache(
+  async (): Promise<Article[]> => {
+    if (!process.env.FIREBASE_PROJECT_ID) {
+      return [];
+    }
 
-  try {
-    const snapshot = await adminDb.collection('articles').get();
-    if (snapshot.empty) return [];
+    try {
+      const snapshot = await adminDb.collection('articles').get();
+      if (snapshot.empty) return [];
 
-    return snapshot.docs.map(doc => doc.data() as Article);
-  } catch (error) {
-    console.error('Failed to fetch articles from Firebase:', error);
-    return [];
-  }
-}
+      return snapshot.docs.map(doc => doc.data() as Article);
+    } catch (error) {
+      console.error('Failed to fetch articles from Firebase:', error);
+      return [];
+    }
+  },
+  ['journal-articles'],
+  { tags: ['articles'] }
+);
 
 export async function getProductDetail(id: string): Promise<ProductDetail | null> {
   if (!process.env.FIREBASE_PROJECT_ID) {
@@ -717,21 +733,25 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
   social: { instagram: '', facebook: '', email: '' },
 };
 
-export async function getSiteSettings(): Promise<SiteSettings> {
-  if (!process.env.FIREBASE_PROJECT_ID) return DEFAULT_SITE_SETTINGS;
-  try {
-    const [heroDoc, socialDoc] = await Promise.all([
-      adminDb.collection('siteSettings').doc('hero').get(),
-      adminDb.collection('siteSettings').doc('social').get(),
-    ]);
-    const h = heroDoc.exists ? (heroDoc.data() as SiteSettings['hero']) : DEFAULT_SITE_SETTINGS.hero;
-    const s = socialDoc.exists ? (socialDoc.data() as SiteSettings['social']) : DEFAULT_SITE_SETTINGS.social;
-    return {
-      hero: { imageUrl: h.imageUrl || DEFAULT_HERO_URL, alt: h.alt || DEFAULT_SITE_SETTINGS.hero.alt },
-      social: { instagram: s.instagram || '', facebook: s.facebook || '', email: s.email || '' },
-    };
-  } catch (err) {
-    console.error('getSiteSettings error:', err);
-    return DEFAULT_SITE_SETTINGS;
-  }
-}
+export const getSiteSettings = unstable_cache(
+  async (): Promise<SiteSettings> => {
+    if (!process.env.FIREBASE_PROJECT_ID) return DEFAULT_SITE_SETTINGS;
+    try {
+      const [heroDoc, socialDoc] = await Promise.all([
+        adminDb.collection('siteSettings').doc('hero').get(),
+        adminDb.collection('siteSettings').doc('social').get(),
+      ]);
+      const h = heroDoc.exists ? (heroDoc.data() as SiteSettings['hero']) : DEFAULT_SITE_SETTINGS.hero;
+      const s = socialDoc.exists ? (socialDoc.data() as SiteSettings['social']) : DEFAULT_SITE_SETTINGS.social;
+      return {
+        hero: { imageUrl: h.imageUrl || DEFAULT_HERO_URL, alt: h.alt || DEFAULT_SITE_SETTINGS.hero.alt },
+        social: { instagram: s.instagram || '', facebook: s.facebook || '', email: s.email || '' },
+      };
+    } catch (err) {
+      console.error('getSiteSettings error:', err);
+      return DEFAULT_SITE_SETTINGS;
+    }
+  },
+  ['site-settings'],
+  { tags: ['settings'] }
+);

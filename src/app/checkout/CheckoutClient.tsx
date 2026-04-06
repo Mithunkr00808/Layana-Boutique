@@ -4,10 +4,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { createOrder, verifyPayment } from "./actions";
+import { addAddress } from "@/app/account/actions";
 import type { Address, CartItem } from "@/lib/data";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { db } from "@/lib/firebase/config";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 
 type PaymentState = "idle" | "creating" | "verifying" | "failed";
 
@@ -33,14 +32,22 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
   const [isPending, startTransition] = useTransition();
   const [addingAddress, setAddingAddress] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
-  const [newAddress, setNewAddress] = useState({
+  const [newAddress, setNewAddress] = useState<{
+    fullName: string;
+    phone: string;
+    streetAddress: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    addressType: "home" | "work" | "other";
+  }>({
     fullName: "",
     phone: "",
     streetAddress: "",
     city: "",
     state: "",
     postalCode: "",
-    addressType: "home" as Address["addressType"],
+    addressType: "home",
   });
 
   useEffect(() => {
@@ -72,7 +79,7 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
 
     startTransition(async () => {
       setPaymentState("creating");
-      const order = await createOrder(selectedAddressId);
+      const order = await createOrder(selectedAddressId, shippingMethod);
 
       if ("error" in order) {
         setFailed(order.error || "Unable to start payment");
@@ -162,31 +169,16 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
       setToastMessage("Sign in to add an address.");
       return;
     }
-    if (
-      !newAddress.fullName ||
-      !/^[6-9]\d{9}$/.test(newAddress.phone) ||
-      !newAddress.streetAddress ||
-      !newAddress.city ||
-      !newAddress.state ||
-      !/^[1-9][0-9]{5}$/.test(newAddress.postalCode)
-    ) {
-      setToastMessage("Please fill all address fields correctly.");
-      return;
-    }
-    try {
-      const userDocRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userDocRef);
-      const stored = (snap.data()?.addresses as Address[] | undefined) || [];
-      const newEntry: Address = { ...newAddress, id: crypto.randomUUID() };
-      const updated = [...stored, newEntry];
-      await setDoc(userDocRef, { addresses: updated }, { merge: true });
-      setAddressesState(updated);
-      setSelectedAddressId(newEntry.id);
+
+    const result = await addAddress(newAddress);
+
+    if (result.success) {
+      setAddressesState((prev) => [...prev, result.address]);
+      setSelectedAddressId(result.address.id);
       setAddingAddress(false);
       setToastMessage("Address added");
-    } catch (err) {
-      console.error("Failed to add address:", err);
-      setToastMessage("Could not add address. Try again.");
+    } else {
+      setToastMessage(result.error || "Could not add address. Try again.");
     }
   };
 
@@ -329,7 +321,7 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
                         <button
                           type="button"
                           key={type}
-                          onClick={() => setAddressField("addressType", type as Address["addressType"])}
+                          onClick={() => setAddressField("addressType", type as "home" | "work" | "other")}
                           className={`px-4 py-2 rounded-full border text-sm capitalize transition ${
                             active
                               ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
@@ -410,7 +402,7 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
                   <div className="flex-1">
                     <p className="font-sans font-semibold text-[var(--color-on-surface)]">{item.name}</p>
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)] mt-1">
-                      {item.size || "OS"} · Qty {item.quantity}
+                      {["one size", "os"].includes((item.size || "").toLowerCase()) ? "" : `${item.size} · `}Qty {item.quantity}
                     </p>
                     <p className="mt-1 font-sans font-semibold text-[var(--color-on-surface)]">
                       {formatPrice(item.rawPrice * item.quantity)}

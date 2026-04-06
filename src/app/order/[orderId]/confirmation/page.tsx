@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { getOrderById } from "@/lib/data";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
@@ -137,7 +136,6 @@ export default async function OrderConfirmationPage({ params }: { params: { orde
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }
