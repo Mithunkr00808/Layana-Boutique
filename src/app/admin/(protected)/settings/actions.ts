@@ -4,29 +4,26 @@ import { adminDb } from '@/lib/firebase/admin';
 import { uploadHeroImage } from '@/lib/cloudinary';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
-export async function saveHeroSettings(formData: FormData) {
-  const imageUrl = formData.get('imageUrl')?.toString().trim() || '';
-  const alt = formData.get('alt')?.toString().trim() || 'Layana Boutique hero image';
-
+export async function saveHeroImages(imagesJson: string) {
   if (!process.env.FIREBASE_PROJECT_ID) {
     return { success: false, error: 'Firebase not configured.' };
   }
 
   try {
-    await adminDb.collection('siteSettings').doc('hero').set({ imageUrl, alt }, { merge: true });
+    const images = JSON.parse(imagesJson);
+    await adminDb.collection('siteSettings').doc('hero').set({ images }, { merge: true });
     revalidatePath('/');
     // @ts-expect-error - Next.js internal type mismatch
     revalidateTag('settings');
     return { success: true };
   } catch (err) {
-    console.error('saveHeroSettings error:', err);
-    return { success: false, error: 'Failed to save hero settings.' };
+    console.error('saveHeroImages error:', err);
+    return { success: false, error: 'Failed to save hero images.' };
   }
 }
 
-export async function uploadAndSaveHeroImage(formData: FormData) {
+export async function uploadHeroImageAction(formData: FormData) {
   const file = formData.get('heroImage') as File | null;
-  const alt = formData.get('alt')?.toString().trim() || 'Layana Boutique hero image';
 
   if (!file || file.size === 0) {
     return { success: false, error: 'No file selected.' };
@@ -39,19 +36,9 @@ export async function uploadAndSaveHeroImage(formData: FormData) {
   try {
     // Upload to Cloudinary
     const { url, publicId } = await uploadHeroImage(file);
-
-    // Save the resulting URL and publicId to Firestore
-    await adminDb.collection('siteSettings').doc('hero').set(
-      { imageUrl: url, publicId, alt },
-      { merge: true }
-    );
-
-    revalidatePath('/');
-    // @ts-expect-error - Next.js internal type mismatch
-    revalidateTag('settings');
-    return { success: true, imageUrl: url };
+    return { success: true, imageUrl: url, publicId };
   } catch (err) {
-    console.error('uploadAndSaveHeroImage error:', err);
+    console.error('uploadHeroImageAction error:', err);
     const message = err instanceof Error ? err.message : 'Upload failed.';
     return { success: false, error: message };
   }

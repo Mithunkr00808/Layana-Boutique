@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import { useRef, useState, useTransition, useCallback } from 'react';
-import { ImageIcon, Mail, CheckCircle2, AlertCircle, Save, Upload, X } from 'lucide-react';
-import { uploadAndSaveHeroImage, saveSocialSettings } from '../actions';
-import type { SiteSettings } from '@/lib/siteSettings';
+import { ImageIcon, Mail, CheckCircle2, AlertCircle, Save, Upload, X, Trash2 } from 'lucide-react';
+import { uploadHeroImageAction, saveSocialSettings, saveHeroImages } from '../actions';
+import type { SiteSettings, HeroImage } from '@/lib/siteSettings';
 
 // ── Inline SVG icons (lucide 1.7.0 doesn't have Instagram/Facebook) ──────────
 function InstagramIcon({ size = 14 }: { size?: number }) {
@@ -43,15 +43,12 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Hero state
-  const [heroAlt, setHeroAlt] = useState(settings.hero.alt);
-  const [currentHeroUrl, setCurrentHeroUrl] = useState(settings.hero.imageUrl);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [heroImages, setHeroImages] = useState<HeroImage[]>(settings.hero.images || []);
   const [isDragging, setIsDragging] = useState(false);
   const [heroStatus, setHeroStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [heroError, setHeroError] = useState('');
-  const [heroProgress, setHeroProgress] = useState('');
-  const [isPendingHero, startHeroTransition] = useTransition();
+  const [uploadProgress, setUploadProgress] = useState(false);
+  const [isPendingHeroSave, startHeroSaveTransition] = useTransition();
 
   // Social state
   const [instagram, setInstagram] = useState(settings.social.instagram);
@@ -61,67 +58,73 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
   const [socialError, setSocialError] = useState('');
   const [isPendingSocial, startSocialTransition] = useTransition();
 
-  // ── File picking helpers ────────────────────────────────────────────────────
-  const applyFile = useCallback((file: File) => {
+  // ── Hero Actions ────────────────────────────────────────────────────────────
+  const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setHeroError('Please select an image file (JPG, PNG, WebP, etc.)');
       setHeroStatus('error');
       setTimeout(() => setHeroStatus('idle'), 3000);
       return;
     }
-    setPendingFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setPendingPreview(objectUrl);
-  }, []);
+
+    setUploadProgress(true);
+    setHeroStatus('idle');
+
+    const fd = new FormData();
+    fd.append('heroImage', file);
+
+    const result = await uploadHeroImageAction(fd);
+
+    if (result.success && result.imageUrl) {
+      setHeroImages((prev) => [
+        ...prev,
+        {
+          imageUrl: result.imageUrl as string,
+          alt: 'Layana Boutique hero image',
+          publicId: result.publicId,
+        },
+      ]);
+    } else {
+      setHeroError(result.error || 'Upload failed.');
+      setHeroStatus('error');
+      setTimeout(() => setHeroStatus('idle'), 4000);
+    }
+    setUploadProgress(false);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) applyFile(file);
+    if (file) handleFileUpload(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) applyFile(file);
-  }, [applyFile]);
+    if (file) handleFileUpload(file);
+  }, []);
 
-  const clearPending = () => {
-    if (pendingPreview) URL.revokeObjectURL(pendingPreview);
-    setPendingFile(null);
-    setPendingPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const removeImage = (indexToRemove: number) => {
+    setHeroImages((prev) => prev.filter((_, i) => i !== indexToRemove));
   };
 
-  // ── Hero upload submit ──────────────────────────────────────────────────────
-  function handleHeroSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!pendingFile) {
-      setHeroError('Please select an image first.');
-      setHeroStatus('error');
-      setTimeout(() => setHeroStatus('idle'), 3000);
-      return;
-    }
+  const updateImageAlt = (index: number, newAlt: string) => {
+    setHeroImages((prev) =>
+      prev.map((img, i) => (i === index ? { ...img, alt: newAlt } : img))
+    );
+  };
 
-    const fd = new FormData();
-    fd.append('heroImage', pendingFile);
-    fd.append('alt', heroAlt);
-
-    startHeroTransition(async () => {
-      setHeroProgress('Uploading to Cloudinary…');
-      const result = await uploadAndSaveHeroImage(fd);
-
-      if (result.success && result.imageUrl) {
-        setCurrentHeroUrl(result.imageUrl);
-        clearPending();
+  function handleHeroSave() {
+    startHeroSaveTransition(async () => {
+      const result = await saveHeroImages(JSON.stringify(heroImages));
+      if (result.success) {
         setHeroStatus('success');
-        setHeroProgress('');
       } else {
-        setHeroError(result.error || 'Upload failed.');
+        setHeroError(result.error || 'Failed to save hero images.');
         setHeroStatus('error');
-        setHeroProgress('');
       }
-      setTimeout(() => setHeroStatus('idle'), 4000);
+      setTimeout(() => setHeroStatus('idle'), 3000);
     });
   }
 
@@ -141,9 +144,6 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
     });
   }
 
-  const displayPreviewUrl = pendingPreview || currentHeroUrl;
-  const isUploading = isPendingHero;
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* ── Hero Image Card ─────────────────────────────────────────────────── */}
@@ -151,135 +151,107 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
         <div className="p-6 border-b border-[#c3c6d6]/10 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-blue-50 text-blue-600"><ImageIcon size={18} /></div>
           <div>
-            <h2 className="font-serif text-lg font-bold text-[#1b1c1c]">Hero Image</h2>
-            <p className="text-xs text-gray-400">Homepage banner — upload from your device</p>
+            <h2 className="font-serif text-lg font-bold text-[#1b1c1c]">Hero Images Slider</h2>
+            <p className="text-xs text-gray-400">Manage images for the homepage animated banner</p>
           </div>
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Current / preview image */}
-          <div className="relative w-full aspect-[16/7] rounded-xl overflow-hidden bg-gray-100 group">
-            {displayPreviewUrl ? (
-              <Image
-                src={displayPreviewUrl}
-                alt={heroAlt || 'Hero preview'}
-                fill
-                className="object-cover transition-opacity duration-300"
-                unoptimized
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-2">
-                <ImageIcon size={40} />
-                <span className="text-xs font-medium">No image uploaded yet</span>
+          {/* Images List */}
+          <div className="space-y-4">
+            {heroImages.map((img, idx) => (
+              <div key={idx} className="flex gap-4 p-4 border border-gray-100 rounded-xl bg-gray-50/50 items-start">
+                <div className="relative w-32 h-20 rounded overflow-hidden flex-shrink-0 bg-gray-200">
+                  <Image src={img.imageUrl} alt={img.alt} fill className="object-cover" unoptimized />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <label className="block text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1">
+                      Alt Text
+                    </label>
+                    <input
+                      type="text"
+                      value={img.alt}
+                      onChange={(e) => updateImageAlt(idx, e.target.value)}
+                      placeholder="Image description..."
+                      className="w-full border-b border-gray-200 bg-transparent py-1 text-sm text-[#1b1c1c] focus:border-[#0051C3] focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition"
+                  >
+                    <Trash2 size={12} /> Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {heroImages.length === 0 && (
+              <div className="text-center p-6 text-gray-400 text-sm border border-dashed rounded-xl">
+                No hero images uploaded yet.
               </div>
             )}
-
-            {/* Overlay gradient */}
-            {displayPreviewUrl && (
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-            )}
-
-            {/* Pending file badge */}
-            {pendingFile && (
-              <div className="absolute top-3 left-3 flex items-center gap-2 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg">
-                <Upload size={11} />
-                Ready to upload
-              </div>
-            )}
-
-            {/* Clear pending button */}
-            {pendingFile && !isUploading && (
-              <button
-                type="button"
-                onClick={clearPending}
-                className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
-                title="Remove selected image"
-              >
-                <X size={14} />
-              </button>
-            )}
-
-            {/* Live / uploading badge */}
-            <span className={`absolute bottom-3 left-3 text-white text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded ${
-              isUploading ? 'bg-blue-600 animate-pulse' : 'bg-black/50'
-            }`}>
-              {isUploading ? (heroProgress || 'Uploading…') : (pendingFile ? 'Preview' : 'Current Hero')}
-            </span>
           </div>
 
-          <form onSubmit={handleHeroSubmit} className="space-y-4">
-            {/* Drag & drop zone */}
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              className={`relative flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl py-8 px-4 cursor-pointer transition-all duration-200 ${
-                isDragging
-                  ? 'border-[#0051C3] bg-blue-50 scale-[1.01]'
-                  : pendingFile
-                  ? 'border-amber-400 bg-amber-50'
-                  : 'border-gray-200 hover:border-[#0051C3]/50 hover:bg-gray-50'
-              }`}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <div className={`p-3 rounded-full transition-colors ${
-                pendingFile ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400'
-              }`}>
-                <Upload size={22} />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-[#1b1c1c]">
-                  {pendingFile ? pendingFile.name : 'Click to browse or drag & drop'}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {pendingFile
-                    ? `${(pendingFile.size / 1024 / 1024).toFixed(2)} MB · ${pendingFile.type}`
-                    : 'JPG, PNG, WebP · Recommended: 1920×1080 or wider'}
-                </p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+          {/* Drag & drop zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            className={`relative flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl py-6 px-4 cursor-pointer transition-all duration-200 ${
+              isDragging
+                ? 'border-[#0051C3] bg-blue-50 scale-[1.01]'
+                : uploadProgress
+                ? 'border-blue-200 bg-blue-50/30'
+                : 'border-gray-200 hover:border-[#0051C3]/50 hover:bg-gray-50'
+            }`}
+            onClick={() => !uploadProgress && fileInputRef.current?.click()}
+          >
+            <div className={`p-3 rounded-full transition-colors ${
+              uploadProgress ? 'bg-blue-100 text-blue-600 animate-pulse' : 'bg-gray-100 text-gray-400'
+            }`}>
+              {uploadProgress ? <Upload size={22} className="animate-bounce" /> : <Upload size={22} />}
             </div>
-
-            {/* Alt text */}
-            <div>
-              <label className="block text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1">
-                Image Alt Text
-              </label>
-              <input
-                type="text"
-                value={heroAlt}
-                onChange={(e) => setHeroAlt(e.target.value)}
-                placeholder="Describe the hero image for accessibility…"
-                className="w-full border-b border-gray-200 bg-transparent py-2 text-sm text-[#1b1c1c] focus:border-[#0051C3] focus:outline-none transition-colors"
-              />
+            <div className="text-center">
+              <p className="text-sm font-semibold text-[#1b1c1c]">
+                {uploadProgress ? 'Uploading...' : 'Click to add a new image'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                JPG, PNG, WebP · Recommended: 1920×1080 or wider
+              </p>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={uploadProgress}
+            />
+          </div>
 
-            <StatusBanner status={heroStatus} message={heroError} />
+          <StatusBanner status={heroStatus} message={heroError} />
 
-            <button
-              type="submit"
-              disabled={isUploading || !pendingFile}
-              className="w-full flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-[#1b1c1c] text-white hover:bg-[#0051C3]"
-            >
-              {isUploading ? (
-                <>
-                  <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />
-                  Uploading…
-                </>
-              ) : (
-                <>
-                  <Upload size={14} />
-                  {pendingFile ? 'Upload & Save Hero Image' : 'Select an image to upload'}
-                </>
-              )}
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={handleHeroSave}
+            disabled={isPendingHeroSave || uploadProgress}
+            className="w-full flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-[#1b1c1c] text-white hover:bg-[#0051C3]"
+          >
+            {isPendingHeroSave ? (
+              <>
+                <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />
+                Saving Changes…
+              </>
+            ) : (
+              <>
+                <Save size={14} />
+                Save Hero Settings
+              </>
+            )}
+          </button>
         </div>
       </div>
 

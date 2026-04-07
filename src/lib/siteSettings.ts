@@ -1,9 +1,17 @@
 import { adminDb } from '@/lib/firebase/admin';
 
+export interface HeroImage {
+  imageUrl: string;
+  alt: string;
+  publicId?: string;
+}
+
 export interface SiteSettings {
   hero: {
-    imageUrl: string;
-    alt: string;
+    images: HeroImage[];
+    // Legacy fields for backward compatibility
+    imageUrl?: string;
+    alt?: string;
   };
   social: {
     instagram: string;
@@ -17,8 +25,12 @@ const DEFAULT_HERO_URL =
 
 const DEFAULT_SETTINGS: SiteSettings = {
   hero: {
-    imageUrl: DEFAULT_HERO_URL,
-    alt: 'Layana Boutique — curating conscious luxury',
+    images: [
+      {
+        imageUrl: DEFAULT_HERO_URL,
+        alt: 'Layana Boutique — curating conscious luxury',
+      }
+    ],
   },
   social: {
     instagram: '',
@@ -43,10 +55,22 @@ export async function getSiteSettings(): Promise<SiteSettings> {
       ? (socialDoc.data() as SiteSettings['social'])
       : DEFAULT_SETTINGS.social;
 
+    // Migrate old format to new format on read
+    let processedImages = h.images || [];
+    if (processedImages.length === 0 && h.imageUrl) {
+      processedImages = [
+        {
+          imageUrl: h.imageUrl,
+          alt: h.alt || 'Layana Boutique',
+        }
+      ];
+    } else if (processedImages.length === 0) {
+      processedImages = DEFAULT_SETTINGS.hero.images;
+    }
+
     return {
       hero: {
-        imageUrl: h.imageUrl || DEFAULT_HERO_URL,
-        alt: h.alt || DEFAULT_SETTINGS.hero.alt,
+        images: processedImages,
       },
       social: {
         instagram: s.instagram || '',
