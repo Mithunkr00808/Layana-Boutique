@@ -25,6 +25,7 @@ import {
   isKnownProductCategory,
 } from "@/lib/catalog/categories";
 import type { ProductMedia } from "@/types/product-media";
+import Image from "next/image";
 
 const PRESET_SIZES = ["XS", "S", "M", "L", "XL"];
 const MAX_MEDIA_ITEMS = 8;
@@ -491,10 +492,11 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
                         preload="metadata"
                       />
                     ) : (
-                      <img
+                      <Image
                         src={item.kind === "pending" ? item.previewUrl : item.src}
                         alt={item.alt}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
                       />
                     )}
 

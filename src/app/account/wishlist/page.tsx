@@ -8,6 +8,7 @@ import { getWishlistItems, removeWishlistItem } from "@/app/account/actions";
 import type { WishlistItem } from "@/app/account/actions";
 import { addCartItem } from "@/app/cart/actions";
 import { Info } from "lucide-react";
+import Image from "next/image";
 
 export default function WishlistPage() {
   const { user, loading } = useAuth();
@@ -114,11 +115,12 @@ export default function WishlistPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-y-16 gap-x-10">
                 {items.map((item) => (
                   <article key={item.id} className="group relative">
-                    <div className="overflow-hidden bg-[var(--color-surface-container-low,#f6f3f2)] aspect-[3/4] mb-6 rounded">
-                      <img
-                        className="w-full h-full object-cover group-hover:scale-105 duration-300 ease-out"
+                    <div className="overflow-hidden bg-[var(--color-surface-container-low,#f6f3f2)] aspect-[3/4] mb-6 rounded relative">
+                      <Image
+                        className="object-cover group-hover:scale-105 duration-300 ease-out"
                         src={item.image || "/placeholder.png"}
                         alt={item.alt || item.name}
+                        fill
                       />
                       <div className="absolute inset-0 flex flex-col items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <button

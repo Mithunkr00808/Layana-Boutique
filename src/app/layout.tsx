@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Serif, Manrope } from "next/font/google";
+import { Noto_Serif, Manrope, Geist } from "next/font/google";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import FooterWithData from "@/components/FooterWithData";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const notoSerif = Noto_Serif({
   variable: "--font-noto-serif",
@@ -44,7 +47,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${notoSerif.variable} ${manrope.variable} h-full antialiased`}
+      className={cn("h-full", "antialiased", notoSerif.variable, manrope.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>

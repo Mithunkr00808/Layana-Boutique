@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Navbar from "@/components/Navbar";
 import AccountSidebar from "@/components/AccountSidebar";
 import { cookies } from "next/headers";
@@ -6,6 +7,7 @@ import { adminAuth } from "@/lib/firebase/admin";
 import { getUserOrders } from "@/lib/data";
 import { Settings, Mail, Sprout } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -105,11 +107,12 @@ export default async function AccountPage() {
                   <div className="flex gap-4 overflow-x-auto pb-4">
                     {latestOrder.items.slice(0, 4).map((item) => (
                       <div key={item.id} className="flex-shrink-0 w-32 group">
-                        <div className="aspect-[3/4] overflow-hidden rounded mb-3 bg-zinc-100">
-                          <img
-                            src={item.image}
+                        <div className="aspect-[3/4] overflow-hidden rounded mb-3 bg-zinc-100 relative">
+                          <Image
+                            src={item.image || "/placeholder.png"}
                             alt={item.alt || item.name}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            fill
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
                           />
                         </div>
                         <p className="text-[10px] font-bold uppercase tracking-tighter truncate">
@@ -178,10 +181,11 @@ export default async function AccountPage() {
                   {savedItems.map((item) => (
                     <div key={item.id} className="space-y-4 group">
                       <div className="aspect-[3/4] bg-[var(--color-surface-container-low,#f6f3f2)] overflow-hidden rounded relative">
-                        <img
-                          src={item.image}
+                        <Image
+                          src={item.image || "/placeholder.png"}
                           alt={item.alt || item.name}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          fill
+                          className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                       </div>
                       <div>

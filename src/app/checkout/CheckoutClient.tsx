@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -7,6 +8,7 @@ import { createOrder, verifyPayment } from "./actions";
 import { addAddress } from "@/app/account/actions";
 import type { Address, CartItem } from "@/lib/data";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import Image from "next/image";
 
 type PaymentState = "idle" | "creating" | "verifying" | "failed";
 
@@ -392,11 +394,12 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
             <div className="space-y-6 mb-8">
               {items.map((item) => (
                 <div key={item.id} className="flex gap-4">
-                  <div className="w-20 h-28 bg-[var(--color-surface-container-highest)] overflow-hidden rounded-lg">
-                    <img
+                  <div className="w-20 h-28 bg-[var(--color-surface-container-highest)] overflow-hidden rounded-lg relative">
+                    <Image
                       src={item.image || "/placeholder.png"}
                       alt={item.alt || item.name}
-                      className="w-full h-full object-cover"
+                      className="object-cover"
+                      fill
                     />
                   </div>
                   <div className="flex-1">

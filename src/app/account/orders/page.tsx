@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Navbar from "@/components/Navbar";
 import AccountSidebar from "@/components/AccountSidebar";
 import { getUserOrders } from "@/lib/data";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/admin";
 import Link from "next/link";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -147,14 +149,15 @@ export default async function OrdersPage() {
                         {order.items.slice(0, 3).map((item, idx) => (
                           <div
                             key={item.id}
-                            className={`w-28 h-40 bg-zinc-100 overflow-hidden shadow-sm ${
+                            className={`w-28 h-40 bg-zinc-100 overflow-hidden shadow-sm relative ${
                               idx === 1 ? "shadow-[-14px_0_24px_rgba(0,0,0,0.08)]" : ""
                             } ${idx === 2 ? "shadow-[-18px_0_30px_rgba(0,0,0,0.12)]" : ""}`}
                           >
-                            <img
-                              src={item.image}
+                            <Image
+                              src={item.image || "/placeholder.png"}
                               alt={item.alt || item.name}
-                              className="w-full h-full object-cover"
+                              fill
+                              className="object-cover"
                             />
                           </div>
                         ))}

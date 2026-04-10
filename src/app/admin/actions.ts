@@ -316,7 +316,6 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
       )
     );
 
-    revalidatePath("/");
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
     revalidatePath(`/product/${id}`);
@@ -365,7 +364,6 @@ export async function deleteCatalogItem(id: string) {
       )
     );
 
-    revalidatePath("/");
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
     // @ts-expect-error - Next.js internal type mismatch
