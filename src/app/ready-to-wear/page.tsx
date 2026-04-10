@@ -7,12 +7,29 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Collections | Layana Boutique",
-  description: "Explore Sarees, Kurties, and Kids Wear from the Layana Boutique catalog.",
+  title: "Shop Designer Sarees, Kurties & Kids Wear",
+  description:
+    "Browse the full Layana Boutique catalog. Shop premium designer sarees, elegant kurties, and festive kids ethnic wear online with free shipping across India.",
   openGraph: {
     type: "website",
-    title: "Collections | Layana Boutique",
-    description: "Explore Sarees, Kurties, and Kids Wear from the Layana Boutique catalog.",
+    title: "Shop Designer Sarees, Kurties & Kids Wear | Layana Boutique",
+    description:
+      "Browse the full Layana Boutique catalog. Premium sarees, kurties, and kids wear.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Layana Boutique — Shop All Collections",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Shop Designer Sarees, Kurties & Kids Wear | Layana Boutique",
+    description:
+      "Browse the full Layana Boutique catalog. Premium sarees, kurties, and kids wear.",
+    images: ["/og-image.png"],
   },
   alternates: {
     canonical: `/ready-to-wear`,

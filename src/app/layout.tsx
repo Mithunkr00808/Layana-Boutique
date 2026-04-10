@@ -26,16 +26,52 @@ export const viewport: Viewport = {
   themeColor: "#fbf9f8",
 };
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://layanaboutique.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(BASE_URL),
   title: {
-    default: "Layana Boutique — Premium Fashion House",
+    default: "Layana Boutique — Designer Sarees, Kurties & Kids Wear Online",
     template: "%s | Layana Boutique",
   },
-  description: "Layana Boutique — curating the future of conscious luxury fashion.",
+  description:
+    "Shop luxury designer sarees, premium kurties and ethnic kids wear at Layana Boutique. Handpicked Indian fashion with artisanal craftsmanship. Free shipping across India.",
+  keywords: [
+    "designer sarees online",
+    "buy sarees online India",
+    "premium kurties",
+    "luxury Indian fashion",
+    "kids ethnic wear",
+    "handloom sarees",
+    "silk sarees online",
+    "linen kurties",
+    "festive kids wear",
+    "layana boutique",
+  ],
+  robots: { index: true, follow: true },
   openGraph: {
-    title: "Layana Boutique",
-    description: "Layana Boutique — curating the future of conscious luxury fashion.",
+    type: "website",
+    locale: "en_IN",
+    url: BASE_URL,
     siteName: "Layana Boutique",
+    title: "Layana Boutique — Designer Sarees, Kurties & Kids Wear",
+    description:
+      "Shop luxury designer sarees, premium kurties and ethnic kids wear. Handpicked Indian fashion with artisanal craftsmanship.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Layana Boutique — Designer Sarees, Kurties & Kids Wear",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Layana Boutique — Designer Sarees, Kurties & Kids Wear",
+    description:
+      "Shop luxury designer sarees, premium kurties and ethnic kids wear at Layana Boutique.",
+    images: ["/og-image.png"],
   },
 };
 

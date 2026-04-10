@@ -9,6 +9,7 @@ import { addAddress } from "@/app/account/actions";
 import type { Address, CartItem } from "@/lib/data";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 type PaymentState = "idle" | "creating" | "verifying" | "failed";
 
@@ -337,13 +338,13 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
                   </div>
                 </div>
                 <div className="md:col-span-2 flex justify-end">
-                  <button
+                  <Button
                     type="button"
                     onClick={addNewAddress}
-                    className="px-6 py-3 bg-[var(--color-primary)] text-white text-xs uppercase tracking-[0.2em] rounded-md hover:opacity-90"
+                    className="px-6 py-6 bg-[var(--color-primary)] text-white text-xs uppercase tracking-[0.2em] rounded-md hover:opacity-90"
                   >
                     Save & Use
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -430,17 +431,17 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
               </div>
             </div>
 
-            <button
+            <Button
               onClick={handlePay}
               disabled={paymentState === "creating" || paymentState === "verifying" || isPending || !items.length}
-              className="w-full mt-8 py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-container)] text-white font-sans text-xs tracking-[0.25em] uppercase rounded-md shadow-lg shadow-[var(--color-primary)]/10 active:scale-95 hover:opacity-90 disabled:opacity-50"
+              className="w-full mt-8 py-8 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-container)] text-white font-sans text-xs tracking-[0.25em] uppercase rounded-md shadow-lg shadow-[var(--color-primary)]/10 active:scale-95 hover:opacity-90 disabled:opacity-50"
             >
               {paymentState === "creating"
                 ? "Securing…"
                 : paymentState === "verifying"
                 ? "Confirming…"
                 : "Proceed to Payment"}
-            </button>
+            </Button>
             <p className="text-xs text-[var(--color-secondary)] mt-4 leading-relaxed">
               By placing your order, you agree to our Terms and Privacy. Secure transaction powered by Razorpay.
             </p>

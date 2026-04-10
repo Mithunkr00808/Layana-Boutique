@@ -2,11 +2,11 @@
 "use server";
 
 import crypto from "crypto";
-import * as admin from "firebase-admin";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { razorpay } from "@/lib/razorpay";
-import type { Address, CartItem } from "@/lib/data";
+import { fulfillOrder } from "@/lib/orders";
+import type { CartItem } from "@/lib/data";
 
 type OrderResponse =
   | { orderId: string; amount: number; currency: string }
@@ -88,35 +88,6 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
   return { items, subtotal };
 }
 
-async function fetchAddress(uid: string, addressId: string): Promise<Address | null> {
-  const userRef = adminDb.collection("users").doc(uid);
-
-  // Try subcollection first
-  const addressDoc = await userRef.collection("addresses").doc(addressId).get().catch(() => null);
-  if (addressDoc && addressDoc.exists) {
-    const data = addressDoc.data() as Partial<Address>;
-    return {
-      id: data.id ?? addressDoc.id,
-      fullName: data.fullName ?? "",
-      phone: data.phone ?? "",
-      streetAddress: data.streetAddress ?? "",
-      city: data.city ?? "",
-      state: data.state ?? "",
-      postalCode: data.postalCode ?? "",
-    };
-  }
-
-  // Fallback to addresses array on user doc
-  const userDoc = await userRef.get();
-  const userData = userDoc.data();
-  if (userData && Array.isArray(userData.addresses)) {
-    const match = (userData.addresses as Address[]).find((addr) => addr.id === addressId);
-    if (match) return match;
-  }
-
-  return null;
-}
-
 const SHIPPING_COSTS: Record<string, number> = {
   standard: 0,
   express: 250,
@@ -185,6 +156,7 @@ export async function verifyPayment(data: {
     const uid = await getUidFromSession();
     if (!uid) return { success: false, error: "Unauthenticated" };
 
+    // ── HMAC Signature Verification ───────────────────────────────────
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET as string)
       .update(`${data.razorpay_order_id}|${data.razorpay_payment_id}`)
@@ -194,58 +166,35 @@ export async function verifyPayment(data: {
       return { success: false, error: "Invalid signature" };
     }
 
+    // ── Ownership Verification ────────────────────────────────────────
+    // Verify the pending order belongs to this user before fulfilling.
     const pendingRef = adminDb.collection("pendingOrders").doc(data.razorpay_order_id);
     const pendingDoc = await pendingRef.get();
 
-    if (!pendingDoc.exists) {
-      return { success: false, error: "Pending order not found" };
+    if (pendingDoc.exists) {
+      const pending = pendingDoc.data();
+      if (pending?.uid && pending.uid !== uid) {
+        return { success: false, error: "Order does not belong to user" };
+      }
     }
 
-    const pending = pendingDoc.data() as {
-      uid: string;
-      items: CartItem[];
-      subtotal: number;
-      amount: number;
-      currency: string;
-    };
+    // ── Delegate to Centralized Fulfillment Core ──────────────────────
+    // fulfillOrder is idempotent — safe to call even if the webhook
+    // already processed this order. It handles:
+    //   • Idempotency guard (returns existing order if already fulfilled)
+    //   • Atomic batch: order creation + inventory deduction + pending cleanup
+    //   • Graceful cart cleanup (non-critical, won't roll back on failure)
+    const result = await fulfillOrder(
+      data.razorpay_order_id,
+      data.razorpay_payment_id,
+      data.razorpay_signature
+    );
 
-    if (pending.uid !== uid) {
-      return { success: false, error: "Order does not belong to user" };
+    if (result.success) {
+      return { success: true, orderId: result.orderId };
     }
 
-    const address = await fetchAddress(uid, data.addressId);
-
-    const subtotal = pending.items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
-
-    const orderDoc = await adminDb.collection("orders").add({
-      userId: uid,
-      razorpayOrderId: data.razorpay_order_id,
-      razorpayPaymentId: data.razorpay_payment_id,
-      razorpaySignature: data.razorpay_signature,
-      status: "paid",
-      items: pending.items,
-      amount: pending.amount,
-      subtotal,
-      shipping: 0,
-      total: subtotal,
-      currency: pending.currency ?? "INR",
-      receipt: data.razorpay_payment_id,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      address,
-    });
-
-    // Clear cart
-    const cartSnapshot = await adminDb.collection("users").doc(uid).collection("cart").get();
-    if (!cartSnapshot.empty) {
-      const batch = adminDb.batch();
-      cartSnapshot.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-    }
-
-    // Cleanup pending order
-    await pendingRef.delete();
-
-    return { success: true, orderId: orderDoc.id };
+    return { success: false, error: result.error };
   } catch (error) {
     console.error("Failed to verify Razorpay payment:", error);
     return { success: false, error: "Verification failed" };

@@ -47,10 +47,11 @@ export default function HeroSlider({ images }: { images: HeroImage[] }) {
 
       {/* Content overlay */}
       <div className="relative z-20 h-full flex flex-col justify-end items-start px-10 pb-20 max-w-[1440px] mx-auto w-full">
-        <h1 className="font-serif text-5xl md:text-[5rem] leading-[0.9] text-white font-light tracking-tighter mb-8 max-w-2xl">
-          The New <br />
-          <i className="font-serif italic font-light">Minimalism</i>
+        <h1 className="font-serif text-5xl md:text-[5rem] leading-[0.9] text-white font-light tracking-tighter mb-4 max-w-2xl">
+          Designer <i className="font-serif italic font-light">Sarees,</i> <br />
+          Kurties & Kids Wear
         </h1>
+        <p className="text-white/70 text-sm tracking-[0.2em] uppercase font-sans mb-8">Curated by Layana Boutique</p>
         <Link 
           href={SHOP_CATALOG_PATH} 
           className="group relative inline-block px-10 py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-container)] text-white text-xs tracking-widest uppercase font-semibold overflow-hidden transition-all duration-300 active:scale-95"

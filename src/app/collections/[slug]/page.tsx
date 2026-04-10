@@ -5,6 +5,7 @@ import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { getReadyToWearProducts } from "@/lib/data";
 import Navbar from "@/components/Navbar";
+import { BreadcrumbJsonLd } from "@/components/seo/jsonld";
 import {
   PRODUCT_CATEGORY_OPTIONS,
   SHOP_CATALOG_PATH,
@@ -24,6 +25,8 @@ type CategoryCollectionPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://layanaboutique.com";
+
 export async function generateMetadata({
   params,
 }: CategoryCollectionPageProps): Promise<Metadata> {
@@ -33,14 +36,41 @@ export async function generateMetadata({
   if (!category) {
     return {
       title: "Collection",
+      description: "Browse the Layana Boutique collection.",
     };
   }
 
   const config = getProductCategoryConfig(category);
+  const title = `${config.label} Collection — Shop Online`;
+  const description = `${config.description} Shop ${config.label.toLowerCase()} online at Layana Boutique with free shipping across India.`;
 
   return {
-    title: config.label,
-    description: config.description,
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      title: `${config.label} | Layana Boutique`,
+      description,
+      url: `${BASE_URL}/collections/${category}`,
+      siteName: "Layana Boutique",
+      images: [
+        {
+          url: "/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: `${config.label} — Layana Boutique Collection`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${config.label} | Layana Boutique`,
+      description,
+      images: ["/og-image.png"],
+    },
+    alternates: {
+      canonical: `/collections/${category}`,
+    },
   };
 }
 
@@ -68,6 +98,13 @@ export default async function CollectionPage({ params }: CategoryCollectionPageP
 
   return (
     <div className="min-h-screen bg-[var(--color-surface)] font-sans text-[var(--color-on-surface)] antialiased bg-white">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", href: "/" },
+          { name: "Collections", href: "/ready-to-wear" },
+          { name: config.label, href: `/collections/${category}` },
+        ]}
+      />
       <Navbar />
 
       <main className="mx-auto max-w-[1440px] px-10 pt-20">

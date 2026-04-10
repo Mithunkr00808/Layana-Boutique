@@ -26,6 +26,7 @@ import {
 } from "@/lib/catalog/categories";
 import type { ProductMedia } from "@/types/product-media";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 const PRESET_SIZES = ["XS", "S", "M", "L", "XL"];
 const MAX_MEDIA_ITEMS = 8;
@@ -738,10 +739,10 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
           >
             Save as Draft
           </button>
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="flex min-w-[170px] items-center justify-center gap-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-container)] px-12 py-3 text-[0.65rem] font-bold uppercase tracking-widest text-white shadow-[0px_8px_24px_rgba(0,59,147,0.2)] transition-all duration-300 hover:shadow-[0px_12px_32px_rgba(0,59,147,0.3)] active:scale-95 disabled:opacity-60"
+            className="flex min-w-[170px] items-center justify-center gap-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-container)] px-12 py-6 text-[0.65rem] font-bold uppercase tracking-widest text-white shadow-[0px_8px_24px_rgba(0,59,147,0.2)] transition-all duration-300 hover:shadow-[0px_12px_32px_rgba(0,59,147,0.3)] active:scale-95 disabled:opacity-60"
           >
             {isSubmitting ? (
               <Loader2 className="size-4 animate-spin" />
@@ -750,7 +751,7 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
             ) : (
               "Publish Item"
             )}
-          </button>
+          </Button>
         </div>
       </footer>
     </form>

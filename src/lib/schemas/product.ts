@@ -11,7 +11,7 @@ export const productSchema = z.object({
   }),
   discountPrice: z.string().optional(),
   quantity: z.number().int().min(0, 'Quantity cannot be negative'),
-  category: z.string().refine((val) => validCategories.includes(val), {
+  category: z.string().refine((val) => validCategories.includes(val as any), {
     message: 'Invalid collection category selected',
   }),
   sustainability: z.string().max(300).optional(),

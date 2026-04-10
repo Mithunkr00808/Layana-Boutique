@@ -5,6 +5,7 @@ import NewArrivals from "@/components/NewArrivals";
 import JournalPreview from "@/components/JournalPreview";
 import FadeIn from "@/components/FadeIn";
 import { getNewArrivals, getJournalArticles } from "@/lib/data";
+import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/jsonld";
 
 export default async function Home() {
   const newArrivals = await getNewArrivals();
@@ -12,6 +13,8 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <OrganizationJsonLd />
+      <WebSiteJsonLd />
       <Navbar />
       <main className="flex-grow overflow-x-hidden">
         <FadeIn delay={0.1}>

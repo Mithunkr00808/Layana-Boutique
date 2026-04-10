@@ -17,6 +17,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { randomUUID } from "crypto";
 import type { ProductMedia } from "@/types/product-media";
+import { productSchema } from "@/lib/schemas/product";
 
 type PersistedMediaInput = ProductMedia & {
   clientKey?: string;
@@ -122,6 +123,24 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     ? submittedCategory
     : DEFAULT_PRODUCT_CATEGORY;
   const description = formData.get("description")?.toString() || "";
+  
+  const validation = productSchema.safeParse({
+    name,
+    price,
+    discountPrice,
+    quantity,
+    category,
+    description,
+    sustainability: formData.get("sustainability")?.toString(),
+    sizes: formData.get("sizes")?.toString(),
+    options: formData.get("options")?.toString(),
+    enableSizes: formData.get("enableSizes")?.toString()
+  });
+
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0]?.message || "Validation failed" };
+  }
+
   const legacyImageUrl = formData.get("image")?.toString() || "";
   const uploadedMedia: ProductMedia[] = [];
 
