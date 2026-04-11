@@ -73,6 +73,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       ? primaryMedia.poster || ""
       : primaryMedia?.src || "";
 
+  const priceNum = parseFloat((product.price || "0").replace(/[^0-9.]/g, ""));
+
   return (
     <div className="flex flex-col min-h-screen">
       <ProductJsonLd product={product} productId={id} />
@@ -86,7 +88,18 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       <Navbar />
       <main className="flex-grow max-w-[1440px] mx-auto px-6 md:px-10 w-full pt-24 pb-20">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-20">
-          <ProductGallery images={product.images} />
+          <ProductGallery 
+            images={product.images} 
+            wishlistItem={{
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              rawPrice: priceNum,
+              image: primaryImage,
+              alt: product.name,
+              variant: product.categoryPath
+            }}
+          />
           <ProductDetails {...product} id={product.id} primaryImage={primaryImage} />
         </div>
         {related.length > 0 ? <RelatedProducts products={related} /> : null}

@@ -214,7 +214,22 @@ export default async function CollectionPage({ params, searchParams }: CategoryC
                     <h3 className="font-serif text-lg italic text-[var(--color-on-surface)]">
                       {product.name}
                     </h3>
-                    <span className="font-sans text-sm font-medium">{product.price}</span>
+                    <div className="flex flex-col items-end">
+                      {product.discountPrice ? (
+                        <>
+                          <span className="font-sans text-sm font-medium text-[var(--color-primary)]">
+                            {product.discountPrice}
+                          </span>
+                          <span className="font-sans text-[11px] text-zinc-400 line-through">
+                            {product.price}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-sans text-sm font-medium">
+                          {product.price}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-[var(--color-secondary)]">
                     {product.options || formatProductCategory(product.category)}

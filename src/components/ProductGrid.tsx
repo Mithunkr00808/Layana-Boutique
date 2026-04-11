@@ -9,6 +9,7 @@ import {
   PRODUCT_CATEGORY_OPTIONS,
   SHOP_CATALOG_PATH,
 } from "@/lib/catalog/categories";
+import WishlistButton from "./WishlistButton";
 
 export interface GridProduct {
   id: string;
@@ -141,6 +142,9 @@ export default function ProductGrid({
                 >
                   Quick View
                 </button>
+              </div>
+              <div className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+                <WishlistButton item={product} />
               </div>
             </div>
             <div className="space-y-1">

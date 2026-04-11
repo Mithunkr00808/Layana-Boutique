@@ -47,7 +47,7 @@ export default function AccountSidebar({ active, email }: Props) {
     try {
       setLoading(true);
       await logout();
-      router.push("/");
+      window.location.href = "/";
     } finally {
       setLoading(false);
     }

@@ -18,7 +18,7 @@ async function getUidFromSession(): Promise<string | null> {
   }
 }
 
-async function getGuestId(): Promise<string> {
+export async function getGuestId(): Promise<string> {
   const cookieStore = await cookies();
   const existing = cookieStore.get("guestId")?.value;
   if (existing) return existing;
@@ -122,6 +122,8 @@ export async function addCartItem(input: {
   image?: string;
   alt?: string;
   quantity?: number; // If provided, sets this exact quantity instead of incrementing
+  originalPrice?: number;
+  originalPriceDisplay?: string;
 }) {
   if (!process.env.FIREBASE_PROJECT_ID) {
     console.warn("No FIREBASE_PROJECT_ID found. Cannot add cart item.");
@@ -161,6 +163,8 @@ export async function addCartItem(input: {
         rawPrice: input.price,
         image: input.image || "",
         alt: input.alt || input.name,
+        originalPrice: input.originalPriceDisplay,
+        rawOriginalPrice: input.originalPrice,
       },
       { merge: true }
     );

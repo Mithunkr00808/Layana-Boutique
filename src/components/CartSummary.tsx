@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 
 export default function CartSummary({ items }: { items: CartItemType[] }) {
   const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
+  const originalSubtotal = items.reduce((acc, item) => acc + (item.rawOriginalPrice ?? item.rawPrice) * item.quantity, 0);
+  const discount = originalSubtotal - subtotal;
+
   const formatInr = (value: number) =>
     `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const router = useRouter();
@@ -17,11 +20,23 @@ export default function CartSummary({ items }: { items: CartItemType[] }) {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <span className="font-sans text-xs tracking-widest uppercase text-zinc-500">Subtotal</span>
-            <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">{formatInr(subtotal)}</span>
+            <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">
+              {formatInr(originalSubtotal)}
+            </span>
           </div>
+
+          {discount > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-primary)]">Discount</span>
+              <span className="font-sans font-medium text-lg text-[var(--color-primary)]">
+                -{formatInr(discount)}
+              </span>
+            </div>
+          )}
+
           <div className="flex justify-between items-center">
             <span className="font-sans text-xs tracking-widest uppercase text-zinc-500">Shipping</span>
-            <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-on-surface)] font-medium">Complimentary</span>
+            <span className="font-sans text-xs tracking-widest uppercase text-zinc-900 font-medium">Complimentary</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-sans text-xs tracking-widest uppercase text-zinc-500">Estimated Tax</span>
@@ -30,7 +45,9 @@ export default function CartSummary({ items }: { items: CartItemType[] }) {
 
           <div className="pt-6 border-t border-[var(--color-outline-variant)]/20 flex justify-between items-center mb-10">
             <span className="font-serif text-xl text-[var(--color-on-surface)]">Total</span>
-            <span className="font-serif text-2xl text-[var(--color-on-surface)]">{formatInr(subtotal)}</span>
+            <span className="font-serif text-2xl text-[var(--color-on-surface)]">
+              {formatInr(subtotal)}
+            </span>
           </div>
 
           <button

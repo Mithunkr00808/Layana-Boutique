@@ -4,6 +4,7 @@ import {
   SHOP_CATALOG_PATH,
   formatProductCategory,
 } from "@/lib/catalog/categories";
+import WishlistButton from "./WishlistButton";
 
 export interface RelatedProduct {
   id: string;
@@ -38,7 +39,7 @@ export default function RelatedProducts({ products }: { products: RelatedProduct
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
         {products.map((product) => (
           <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer block">
-            <div className="aspect-[3/4] rounded-[20px] overflow-hidden bg-[var(--color-surface-container-low)] mb-6">
+            <div className="aspect-[3/4] rounded-[20px] overflow-hidden bg-[var(--color-surface-container-low)] mb-6 relative">
               <Image
                 src={product.image}
                 alt={product.alt}
@@ -46,6 +47,9 @@ export default function RelatedProducts({ products }: { products: RelatedProduct
                 height={400}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ease-out"
               />
+              <div className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+                <WishlistButton item={product} />
+              </div>
             </div>
             <div className="space-y-1">
               <div className="flex justify-between items-center">

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ProductMedia } from "@/types/product-media";
+import type { WishlistItem } from "@/app/account/actions";
+import WishlistButton from "./WishlistButton";
 
 function MediaCard({ media, priority }: { media: ProductMedia; priority?: boolean }) {
   const isVideo = media.resourceType === "video";
@@ -35,7 +37,13 @@ function MediaCard({ media, priority }: { media: ProductMedia; priority?: boolea
   );
 }
 
-export default function ProductGallery({ images }: { images: ProductMedia[] }) {
+export default function ProductGallery({ 
+  images,
+  wishlistItem 
+}: { 
+  images: ProductMedia[];
+  wishlistItem?: WishlistItem;
+}) {
   const [current, setCurrent] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -141,10 +149,17 @@ export default function ProductGallery({ images }: { images: ProductMedia[] }) {
           </>
         )}
 
-        {/* Slide counter badge */}
+        {/* Slide counter badge — moved to top-left or bottom to avoid wishlist button overlap */}
         {count > 1 && (
-          <div className="absolute top-4 right-4 z-10 rounded-full bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-sm">
+          <div className="absolute bottom-4 right-4 z-10 rounded-full bg-black/30 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-md">
             {current + 1} / {count}
+          </div>
+        )}
+
+        {/* Wishlist Button — Top Right */}
+        {wishlistItem && (
+          <div className="absolute top-4 right-4 z-10">
+            <WishlistButton item={wishlistItem} size={20} />
           </div>
         )}
       </div>

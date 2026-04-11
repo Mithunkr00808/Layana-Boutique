@@ -3,7 +3,9 @@
 import { useEffect, useState, useTransition } from "react";
 import Navbar from "@/components/Navbar";
 import AccountSidebar from "@/components/AccountSidebar";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { useWishlist } from "@/lib/contexts/WishlistContext";
 import { getWishlistItems, removeWishlistItem } from "@/app/account/actions";
 import type { WishlistItem } from "@/app/account/actions";
 import { addCartItem } from "@/app/cart/actions";
@@ -12,13 +14,20 @@ import Image from "next/image";
 
 export default function WishlistPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const { removeById } = useWishlist();
+
+  useEffect(() => {
+    if (!loading && !user && !isLoading) {
+      router.replace("/login?callbackUrl=/account/wishlist");
+    }
+  }, [user, loading, isLoading, router]);
 
   useEffect(() => {
     async function fetchWishlist() {
-      if (!user) return;
       try {
         const data = await getWishlistItems();
         setItems(data);
@@ -32,11 +41,16 @@ export default function WishlistPage() {
   }, [user]);
 
   const removeItem = async (id: string) => {
-    if (!user) return;
     try {
+      // Update global context first (optimistic)
+      removeById(id);
+      
       const result = await removeWishlistItem(id);
       if (result.success) {
         setItems((prev) => prev.filter((i) => i.id !== id));
+      } else {
+        // Rollback or re-refetch if fail? 
+        // For now, simple removal from local UI state.
       }
     } catch (error) {
       console.error("Failed to remove wishlist item:", error);

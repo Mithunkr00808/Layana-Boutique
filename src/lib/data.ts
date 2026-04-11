@@ -65,6 +65,8 @@ export interface CartItem {
   rawPrice: number;
   image: string;
   alt: string;
+  originalPrice?: string;
+  rawOriginalPrice?: number;
 }
 
 export interface Address {
@@ -372,6 +374,8 @@ function mapCartDoc(doc: DocumentSnapshot): CartItem {
     rawPrice: data?.rawPrice ?? 0,
     image: data?.image ?? '',
     alt: data?.alt ?? '',
+    originalPrice: data?.originalPrice,
+    rawOriginalPrice: data?.rawOriginalPrice,
   };
 }
 

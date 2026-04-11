@@ -4,6 +4,7 @@ import {
   SHOP_CATALOG_PATH,
   formatProductCategory,
 } from "@/lib/catalog/categories";
+import WishlistButton from "./WishlistButton";
 
 export interface ProductSummary {
   id: string;
@@ -53,6 +54,9 @@ export default function NewArrivals({ products }: { products: ProductSummary[] }
                   Limited
                 </div>
               )}
+              <div className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+                <WishlistButton item={product} />
+              </div>
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex justify-between items-center">

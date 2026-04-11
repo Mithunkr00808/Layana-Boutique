@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition, useEffect } from "react";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { addCartItem, getCartItemQuantity } from "@/app/cart/actions";
 import { formatProductCategory } from "@/lib/catalog/categories";
+import WishlistButton from "./WishlistButton";
 
 interface SizeProps {
   label: string;
@@ -35,7 +36,7 @@ export default function ProductDetails(props: ProductDetailsProps) {
   const [message, setMessage] = useState<string>("");
 
   // Local quantity — this is the count the user sees and adjusts BEFORE confirming
-  const [localQty, setLocalQty] = useState<number>(1);
+  const [localQty, setLocalQty] = useState<number>(0);
   // Whether the item exists in the cart (synced from server on mount)
   const [cartSynced, setCartSynced] = useState(false);
 
@@ -50,7 +51,7 @@ export default function ProductDetails(props: ProductDetailsProps) {
           setLocalQty(qty);
           setCartSynced(true);
         } else {
-          setLocalQty(1);
+          setLocalQty(0);
           setCartSynced(false);
         }
       }
@@ -79,6 +80,8 @@ export default function ProductDetails(props: ProductDetailsProps) {
   );
 
   const handleAddToBag = () => {
+    const nextQty = localQty + 1;
+    setLocalQty(nextQty);
     setMessage("");
     // Optimistic: mark as synced immediately
     setCartSynced(true);
@@ -93,21 +96,23 @@ export default function ProductDetails(props: ProductDetailsProps) {
         priceDisplay,
         image: props.primaryImage || "",
         alt: props.name,
-        quantity: localQty,
+        quantity: nextQty,
+        originalPrice: props.discountPrice ? numericPrice : undefined,
+        originalPriceDisplay: props.discountPrice ? props.price : undefined,
       });
 
       if (!result.ok) {
         setMessage("Could not update bag. Please try again.");
         setCartSynced(false);
       } else {
-        setMessage(localQty > 0 ? "Bag updated" : "Removed from bag");
+        setMessage(nextQty > 0 ? "Bag updated" : "Removed from bag");
         setTimeout(() => setMessage(""), 2000);
       }
     });
   };
 
   const decrementQty = () => {
-    setLocalQty((prev) => Math.max(1, prev - 1));
+    setLocalQty((prev) => (prev > 0 ? prev - 1 : 0));
   };
 
   const incrementQty = () => {
@@ -195,17 +200,18 @@ export default function ProductDetails(props: ProductDetailsProps) {
             {/* Add to Bag button — always on the left, text never changes */}
             <button
               onClick={handleAddToBag}
-              disabled={isPending || !numericPrice || isOutOfStock || localQty <= 0}
+              disabled={isPending || !numericPrice || isOutOfStock}
               className="flex-1 bg-[var(--color-on-surface)] text-[var(--color-surface)] py-[18px] rounded-sm font-sans text-xs uppercase tracking-widest transition-all active:scale-[0.99] hover:opacity-90 disabled:opacity-50"
             >
               {isOutOfStock ? "OUT OF STOCK" : isPending ? "Adding..." : "Add to Bag"}
             </button>
 
+
             {/* Quantity selector — always on the right */}
             <div className="flex items-center border border-[var(--color-outline-variant)]/40 rounded-sm">
               <button
                 onClick={decrementQty}
-                disabled={localQty <= 1 || isOutOfStock}
+                disabled={localQty <= 0 || isOutOfStock}
                 className="px-4 py-4 hover:bg-[var(--color-surface-container-high)] transition-colors disabled:opacity-30"
                 aria-label="Decrease quantity"
               >

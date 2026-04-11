@@ -15,6 +15,8 @@ export interface CartItemType {
   rawPrice: number;
   image: string;
   alt: string;
+  originalPrice?: string;
+  rawOriginalPrice?: number;
 }
 
 export default function CartItems({ items }: { items: CartItemType[] }) {
@@ -97,7 +99,16 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
               </button>
             </div>
             
-            <div className="text-right font-serif text-lg">{formatInr(item.rawPrice)}</div>
+            <div className="text-right flex flex-col items-end">
+              <span className="font-serif text-lg text-[var(--color-on-surface)]">
+                {formatInr(item.rawPrice)}
+              </span>
+              {item.originalPrice && (
+                <span className="font-sans text-[10px] tracking-widest uppercase text-zinc-400 line-through">
+                  {item.originalPrice}
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
