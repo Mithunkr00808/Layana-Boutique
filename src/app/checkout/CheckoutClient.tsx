@@ -114,7 +114,7 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
           if (result.success) {
             router.push(`/order/${result.orderId}/confirmation`);
           } else {
-            setFailed("Payment failed. Please try again.");
+            setFailed(result.error || "Payment verification failed. Please contact support.");
           }
         },
         modal: {

@@ -14,8 +14,14 @@ function formatInr(value: number) {
   return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export default async function OrderConfirmationPage({ params }: { params: { orderId: string } }) {
-  const order = await getOrderById(params.orderId);
+export default async function OrderConfirmationPage({ params }: { params: Promise<{ orderId: string }> }) {
+  const { orderId } = await params;
+
+  if (!orderId) {
+    redirect("/account");
+  }
+
+  const order = await getOrderById(orderId);
 
   if (!order) {
     redirect("/account");

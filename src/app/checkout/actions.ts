@@ -62,20 +62,29 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
   const snapshot = await adminDb.collection("users").doc(uid).collection("cart").get();
   if (snapshot.empty) return { items: [], subtotal: 0 };
 
-  const items = await Promise.all(
+  const itemsResults = await Promise.all(
     snapshot.docs.map(async (doc) => {
       const data = doc.data() as Partial<CartItem>;
-      const basePrice = parsePriceToNumber(data.rawPrice ?? data.price);
-      const verifiedPrice = (await getVerifiedPrice(data.id ?? doc.id)) || basePrice;
+      
+      // Security: Strictly verify price from server, no client fallback
+      const verifiedPrice = await getVerifiedPrice(data.id ?? doc.id);
+      if (verifiedPrice <= 0) return null;
+
+      // Best-effort stock check
+      const productDoc = await adminDb.collection("products").doc(data.id ?? doc.id).get();
+      const stock = productDoc.exists ? (productDoc.data()?.quantity ?? 0) : 0;
       const quantity = data.quantity ?? 1;
 
-      const finalPrice = verifiedPrice > 0 ? verifiedPrice : 0;
+      // If stock is 0 but item is in cart, we filter it out to prevent purchase
+      if (stock <= 0) return null;
+
+      const finalPrice = verifiedPrice;
       return {
         id: data.id ?? doc.id,
         name: data.name ?? "Item",
         variant: data.variant ?? "",
         size: data.size ?? "",
-        quantity,
+        quantity: Math.min(quantity, stock), // Cap at available stock
         price: `₹${finalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
         rawPrice: finalPrice,
         image: data.image ?? "",
@@ -84,6 +93,7 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
     })
   );
 
+  const items = itemsResults.filter((item): item is CartItem => item !== null);
   const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
   return { items, subtotal };
 }
@@ -109,7 +119,19 @@ export async function createOrder(
 
     const { items, subtotal } = await getVerifiedCart(uid);
     if (!items.length || subtotal <= 0) {
-      return { error: "Cart is empty" };
+      return { error: "Cart is empty or items are no longer available" };
+    }
+
+    // Security: Validate address existence and ownership before creating order
+    const addressDoc = await adminDb
+      .collection("users")
+      .doc(uid)
+      .collection("addresses")
+      .doc(addressId)
+      .get();
+    
+    if (!addressDoc.exists) {
+      return { error: "Delivery address not found. Please select a valid address." };
     }
 
     const shippingCost = SHIPPING_COSTS[shippingMethod] ?? 0;

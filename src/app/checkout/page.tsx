@@ -3,6 +3,8 @@ import CheckoutClient from "./CheckoutClient";
 import { getCartItemsForUser, getUserAddresses } from "@/lib/data";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { adminAuth } from "@/lib/firebase/admin";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -12,6 +14,16 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage() {
+  // Server-side auth guard
+  const cookieStore = await cookies();
+  const session = cookieStore.get("session")?.value;
+  if (!session) redirect("/account");
+  try {
+    await adminAuth.verifySessionCookie(session, true);
+  } catch {
+    redirect("/account");
+  }
+
   const items = await getCartItemsForUser();
   const addresses = await getUserAddresses();
 
