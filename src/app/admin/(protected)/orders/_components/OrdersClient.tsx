@@ -290,7 +290,7 @@ function OrderRow({
                     >
                       {item.image && (
                         <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded bg-gray-100">
-                          <Image src={item.image} alt={item.alt || item.name} fill className="object-cover" />
+                          <Image src={item.image} alt={item.alt || item.name} fill sizes="80px" className="object-cover" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">

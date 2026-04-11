@@ -134,6 +134,7 @@ export default function WishlistPage() {
                         className="object-cover group-hover:scale-105 duration-300 ease-out"
                         src={item.image || "/placeholder.png"}
                         alt={item.alt || item.name}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         fill
                       />
                       <div className="absolute inset-0 flex flex-col items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

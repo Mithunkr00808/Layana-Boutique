@@ -153,17 +153,23 @@ export async function fulfillOrder(
     address,
   });
 
-  // 2. Deduct inventory from both `products` and `productDetails`
+  // 2. Deduct inventory from `products` and `productDetails` (if docs exist)
   for (const item of pending.items) {
     const productRef = adminDb.collection("products").doc(item.id);
-    batch.update(productRef, {
-      quantity: admin.firestore.FieldValue.increment(-item.quantity),
-    });
+    const productDoc = await productRef.get();
+    if (productDoc.exists) {
+      batch.update(productRef, {
+        quantity: admin.firestore.FieldValue.increment(-item.quantity),
+      });
+    }
 
     const detailRef = adminDb.collection("productDetails").doc(item.id);
-    batch.update(detailRef, {
-      quantity: admin.firestore.FieldValue.increment(-item.quantity),
-    });
+    const detailDoc = await detailRef.get();
+    if (detailDoc.exists) {
+      batch.update(detailRef, {
+        quantity: admin.firestore.FieldValue.increment(-item.quantity),
+      });
+    }
   }
 
   // 3. Delete the pending order

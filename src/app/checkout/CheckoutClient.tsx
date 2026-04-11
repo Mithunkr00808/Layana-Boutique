@@ -401,6 +401,7 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
                       alt={item.alt || item.name}
                       className="object-cover"
                       fill
+                      sizes="80px"
                     />
                   </div>
                   <div className="flex-1">

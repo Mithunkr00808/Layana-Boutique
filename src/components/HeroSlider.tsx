@@ -33,6 +33,7 @@ export default function HeroSlider({ images }: { images: HeroImage[] }) {
             src={img.imageUrl}
             alt={img.alt || 'Hero Image'}
             fill
+            sizes="100vw"
             priority={index === 0}
             loading={index === 0 ? 'eager' : 'lazy'}
             className="object-cover grayscale-[20%] scale-105 transform-gpu will-change-transform transition-transform duration-[6000ms] ease-out"

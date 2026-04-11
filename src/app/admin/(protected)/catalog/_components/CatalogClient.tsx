@@ -220,6 +220,7 @@ export default function CatalogClient({ products }: { products: CatalogProduct[]
                                   src={product.image}
                                   alt={product.alt || product.name || 'Product image'}
                                   fill
+                                  sizes="80px"
                                   className="object-cover"
                                 />
                               ) : (
