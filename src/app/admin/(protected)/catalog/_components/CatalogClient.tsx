@@ -49,6 +49,7 @@ export default function CatalogClient({ products }: { products: CatalogProduct[]
       result = result.filter(
         (p) =>
           (p.name || '').toLowerCase().includes(q) ||
+          p.id.toLowerCase().includes(q) ||
           getSku(p).toLowerCase().includes(q) ||
           (p.category || '').toLowerCase().includes(q)
       );
