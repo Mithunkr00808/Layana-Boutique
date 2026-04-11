@@ -3,17 +3,12 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bold,
   ChevronLeft,
   ChevronRight,
   Eye,
   Film,
   ImageUp,
-  Italic,
-  Link2,
-  List,
   Loader2,
-  Maximize2,
   Plus,
   Trash,
   X,
@@ -468,32 +463,12 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
                 The Narrative
               </label>
               <div className="min-h-[300px] rounded-lg border border-[var(--color-outline-variant)]/5 bg-[var(--color-surface-container-lowest)] p-8 shadow-[0px_24px_48px_rgba(27,28,28,0.03)]">
-                <div className="mb-6 flex gap-4 border-b border-[var(--color-surface-container)] pb-4 text-[var(--color-on-surface-variant)]">
-                  <button type="button" className="transition-colors hover:text-[var(--color-primary)]">
-                    <Bold className="size-4" />
-                  </button>
-                  <button type="button" className="transition-colors hover:text-[var(--color-primary)]">
-                    <Italic className="size-4" />
-                  </button>
-                  <button type="button" className="transition-colors hover:text-[var(--color-primary)]">
-                    <List className="size-4" />
-                  </button>
-                  <button type="button" className="transition-colors hover:text-[var(--color-primary)]">
-                    <Link2 className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className="ml-auto transition-colors hover:text-[var(--color-primary)]"
-                  >
-                    <Maximize2 className="size-4" />
-                  </button>
-                </div>
                 <textarea
                   name="description"
                   required
                   defaultValue={initialData?.description}
                   placeholder="Describe the craftsmanship, materials, and the feeling this piece evokes..."
-                  className="min-h-[200px] w-full resize-none border-none bg-transparent p-0 leading-relaxed text-[var(--color-on-surface-variant)] focus:outline-none"
+                  className="min-h-[250px] w-full resize-none border-none bg-transparent p-0 leading-relaxed text-[var(--color-on-surface-variant)] focus:outline-none"
                 />
               </div>
             </div>

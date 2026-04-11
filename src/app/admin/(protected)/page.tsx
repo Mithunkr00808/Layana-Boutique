@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { adminDb } from "@/lib/firebase/admin";
-import { Package, ShoppingBag, Users, TrendingUp, Search, Bell, Activity } from 'lucide-react';
+import { Package, ShoppingBag, Users, TrendingUp, Activity } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -78,40 +78,13 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Header with Search and Profile */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-[#c3c6d6]/10">
-        <div className="relative w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search metrics, orders, or items..."
-            className="w-full pl-10 pr-4 py-2 bg-[#fbf9f8] border-none rounded-lg text-sm focus:ring-1 focus:ring-[#0051C3] transition-all"
-          />
-        </div>
-        <div className="flex items-center gap-6">
-          <button className="relative text-gray-500 hover:text-black transition-colors">
-            <Bell size={20} />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
-          <div className="flex items-center gap-3 border-l pl-6 border-gray-100">
-            <div className="text-right">
-              <p className="text-xs font-bold text-[#1b1c1c]">LB Admin</p>
-              <p className="text-[10px] text-gray-400">Store Manager</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1b1c1c] to-[#434653] flex items-center justify-center text-white text-xs font-bold shadow-inner">
-              AA
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Sales', value: `₹${totalSales.toLocaleString()}`, change: '+12.5%', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Orders Received', value: orderCount.toString(), change: `${pendingOrdersCount} pending`, icon: ShoppingBag, color: 'text-[#0051C3]', bg: 'bg-blue-50' },
-          { label: 'Active Catalog', value: productCount.toString(), change: 'Real-time', icon: Package, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Total Reach', value: userCount.toString(), change: '+18%', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Total Sales', value: `₹${totalSales.toLocaleString()}`, sub: 'Lifetime revenue', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Orders Received', value: orderCount.toString(), sub: `${pendingOrdersCount} pending`, icon: ShoppingBag, color: 'text-[#0051C3]', bg: 'bg-blue-50' },
+          { label: 'Active Catalog', value: productCount.toString(), sub: 'Products listed', icon: Package, color: 'text-orange-600', bg: 'bg-orange-50' },
+          { label: 'Total Reach', value: userCount.toString(), sub: 'Registered users', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
         ].map((stat, i) => (
           <div key={i} className="group bg-white p-6 rounded-xl shadow-sm border border-[#c3c6d6]/10 hover:shadow-md transition-all duration-300 hover:-translate-y-1">
             <div className="flex justify-between items-start mb-4">
@@ -123,9 +96,8 @@ export default async function AdminDashboard() {
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold text-[#1b1c1c] tracking-tight">{stat.value}</h3>
             </div>
-            <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
-              <span className="font-bold text-green-600">{stat.change}</span>
-              <span className="opacity-60 font-medium">vs last month</span>
+            <p className="mt-2 text-xs text-gray-500">
+              <span className="font-medium">{stat.sub}</span>
             </p>
           </div>
         ))}

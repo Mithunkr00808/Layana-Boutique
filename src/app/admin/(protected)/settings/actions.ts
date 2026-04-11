@@ -3,8 +3,10 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { uploadHeroImage } from '@/lib/cloudinary';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { assertAdminSession } from '@/lib/auth/admin-session';
 
 export async function saveHeroImages(imagesJson: string) {
+  await assertAdminSession();
   if (!process.env.FIREBASE_PROJECT_ID) {
     return { success: false, error: 'Firebase not configured.' };
   }
@@ -23,6 +25,7 @@ export async function saveHeroImages(imagesJson: string) {
 }
 
 export async function uploadHeroImageAction(formData: FormData) {
+  await assertAdminSession();
   const file = formData.get('heroImage') as File | null;
 
   if (!file || file.size === 0) {
@@ -45,6 +48,7 @@ export async function uploadHeroImageAction(formData: FormData) {
 }
 
 export async function saveSocialSettings(formData: FormData) {
+  await assertAdminSession();
   const instagram = formData.get('instagram')?.toString().trim() || '';
   const facebook = formData.get('facebook')?.toString().trim() || '';
   const email = formData.get('email')?.toString().trim() || '';
