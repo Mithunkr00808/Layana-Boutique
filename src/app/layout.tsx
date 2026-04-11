@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Serif, Manrope, Geist } from "next/font/google";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { WishlistProvider } from "@/lib/contexts/WishlistContext";
+import { CartProvider } from "@/lib/contexts/CartContext";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import FooterWithData from "@/components/FooterWithData";
 import "./globals.css";
@@ -89,12 +90,14 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <WishlistProvider>
-            <div className="flex-1 flex flex-col">
-              {children}
-            </div>
-            <ConditionalFooter>
-              <FooterWithData />
-            </ConditionalFooter>
+            <CartProvider>
+              <div className="flex-1 flex flex-col">
+                {children}
+              </div>
+              <ConditionalFooter>
+                <FooterWithData />
+              </ConditionalFooter>
+            </CartProvider>
           </WishlistProvider>
         </AuthProvider>
       </body>

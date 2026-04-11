@@ -137,10 +137,13 @@ export default function WishlistPage() {
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         fill
                       />
-                      <div className="absolute inset-0 flex flex-col items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute inset-0 flex flex-col items-end p-4 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <button
-                          onClick={() => removeItem(item.id)}
-                          className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-zinc-700 hover:text-red-600 transition-colors mb-2"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            removeItem(item.id);
+                          }}
+                          className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-zinc-700 hover:text-red-600 transition-colors mb-2 shadow-sm"
                           aria-label="Remove from wishlist"
                         >
                           ×

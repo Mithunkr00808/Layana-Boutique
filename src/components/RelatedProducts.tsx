@@ -47,7 +47,7 @@ export default function RelatedProducts({ products }: { products: RelatedProduct
                 height={400}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ease-out"
               />
-              <div className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+              <div className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-100 md:opacity-0 group-hover:opacity-100">
                 <WishlistButton item={product} />
               </div>
             </div>

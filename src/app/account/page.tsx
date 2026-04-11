@@ -83,8 +83,8 @@ export default async function AccountPage() {
               {email && <p className="text-sm text-zinc-400">{email}</p>}
             </section>
 
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-[var(--color-surface-container-low,#f6f3f2)] rounded-lg p-8 flex flex-col justify-between min-h-[380px] border border-zinc-200/60">
+            <section className="grid grid-cols-1 gap-6">
+              <div className="bg-[var(--color-surface-container-low,#f6f3f2)] rounded-lg p-8 flex flex-col justify-between min-h-[380px] border border-zinc-200/60">
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <h3 className="text-2xl font-serif mb-2">Latest Order</h3>
@@ -146,23 +146,6 @@ export default async function AccountPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-900 text-white rounded-lg p-8 flex flex-col justify-between">
-                <div>
-                  <Sprout className="text-white mb-6" size={36} strokeWidth={1.5} />
-                  <h3 className="text-2xl font-serif leading-tight mb-4">
-                    Sustainability Impact
-                  </h3>
-                  <p className="text-sm opacity-80 leading-relaxed">
-                    Based on your choices this season, your estimated impact savings are{" "}
-                    <span className="font-bold">4.2kg CO₂</span>. Keep shopping consciously.
-                  </p>
-                </div>
-                <div className="mt-8">
-                  <button className="w-full py-4 border border-white/20 hover:bg-white hover:text-blue-900 transition-all duration-500 text-[10px] uppercase font-bold tracking-[0.2em] rounded-lg">
-                    View Detailed Report
-                  </button>
-                </div>
-              </div>
             </section>
 
             <section>

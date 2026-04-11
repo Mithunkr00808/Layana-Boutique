@@ -44,14 +44,15 @@ async function getVerifiedPrice(productId: string): Promise<number> {
   const productDoc = await adminDb.collection("products").doc(productId).get();
   if (productDoc.exists) {
     const data = productDoc.data();
-    const price = parsePriceToNumber(data?.rawPrice ?? data?.price);
+    // Prioritize discountPrice if available, then fall back to price/rawPrice
+    const price = parsePriceToNumber(data?.discountPrice || data?.rawPrice || data?.price);
     if (price > 0) return price;
   }
 
   const detailDoc = await adminDb.collection("productDetails").doc(productId).get();
   if (detailDoc.exists) {
     const data = detailDoc.data();
-    const price = parsePriceToNumber(data?.rawPrice ?? data?.price);
+    const price = parsePriceToNumber(data?.discountPrice || data?.rawPrice || data?.price);
     if (price > 0) return price;
   }
 
@@ -64,14 +65,18 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
 
   const itemsResults = await Promise.all(
     snapshot.docs.map(async (doc) => {
-      const data = doc.data() as Partial<CartItem>;
+      const data = doc.data() as Partial<CartItem> & { productId?: string };
+      
+      // The cart doc ID is a composite key (e.g. "product-abc-onesize"),
+      // so we must use the stored productId field for product lookups.
+      const productId = data.productId || data.id || doc.id;
       
       // Security: Strictly verify price from server, no client fallback
-      const verifiedPrice = await getVerifiedPrice(data.id ?? doc.id);
+      const verifiedPrice = await getVerifiedPrice(productId);
       if (verifiedPrice <= 0) return null;
 
       // Best-effort stock check
-      const productDoc = await adminDb.collection("products").doc(data.id ?? doc.id).get();
+      const productDoc = await adminDb.collection("products").doc(productId).get();
       const stock = productDoc.exists ? (productDoc.data()?.quantity ?? 0) : 0;
       const quantity = data.quantity ?? 1;
 
@@ -123,14 +128,12 @@ export async function createOrder(
     }
 
     // Security: Validate address existence and ownership before creating order
-    const addressDoc = await adminDb
-      .collection("users")
-      .doc(uid)
-      .collection("addresses")
-      .doc(addressId)
-      .get();
-    
-    if (!addressDoc.exists) {
+    const userDoc = await adminDb.collection("users").doc(uid).get();
+    const userData = userDoc.data();
+    const addresses = (userData?.addresses as any[]) || [];
+    const addressExists = addresses.some((addr) => addr.id === addressId);
+
+    if (!addressExists) {
       return { error: "Delivery address not found. Please select a valid address." };
     }
 

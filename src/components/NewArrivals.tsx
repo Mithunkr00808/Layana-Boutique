@@ -54,7 +54,7 @@ export default function NewArrivals({ products }: { products: ProductSummary[] }
                   Limited
                 </div>
               )}
-              <div className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+              <div className="absolute top-4 right-4 z-10 transition-opacity duration-300 opacity-100 md:opacity-0 group-hover:opacity-100">
                 <WishlistButton item={product} />
               </div>
             </div>

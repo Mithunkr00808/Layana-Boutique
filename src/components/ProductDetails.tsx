@@ -5,6 +5,7 @@ import { ChevronDown, Minus, Plus } from "lucide-react";
 import { addCartItem, getCartItemQuantity } from "@/app/cart/actions";
 import { formatProductCategory } from "@/lib/catalog/categories";
 import WishlistButton from "./WishlistButton";
+import { useCart } from "@/lib/contexts/CartContext";
 
 interface SizeProps {
   label: string;
@@ -79,6 +80,8 @@ export default function ProductDetails(props: ProductDetailsProps) {
     [numericEffectivePrice]
   );
 
+  const { addItem } = useCart();
+
   const handleAddToBag = () => {
     const nextQty = localQty + 1;
     setLocalQty(nextQty);
@@ -87,26 +90,25 @@ export default function ProductDetails(props: ProductDetailsProps) {
     setCartSynced(true);
 
     startTransition(async () => {
-      const result = await addCartItem({
-        productId: props.id,
-        name: props.name,
-        variant: props.categoryPath,
-        size: effectiveSize,
-        price: numericEffectivePrice,
-        priceDisplay,
-        image: props.primaryImage || "",
-        alt: props.name,
-        quantity: nextQty,
-        originalPrice: props.discountPrice ? numericPrice : undefined,
-        originalPriceDisplay: props.discountPrice ? props.price : undefined,
-      });
-
-      if (!result.ok) {
-        setMessage("Could not update bag. Please try again.");
-        setCartSynced(false);
-      } else {
+      try {
+        await addItem({
+          productId: props.id,
+          name: props.name,
+          variant: props.categoryPath,
+          size: effectiveSize,
+          price: numericEffectivePrice,
+          priceDisplay,
+          image: props.primaryImage || "",
+          alt: props.name,
+          quantity: nextQty,
+          originalPrice: props.discountPrice ? numericPrice : undefined,
+          originalPriceDisplay: props.discountPrice ? props.price : undefined,
+        });
         setMessage(nextQty > 0 ? "Bag updated" : "Removed from bag");
         setTimeout(() => setMessage(""), 2000);
+      } catch (err) {
+        setMessage("Could not update bag. Please try again.");
+        setCartSynced(false);
       }
     });
   };

@@ -207,3 +207,8 @@ export async function clearUserCart(uid?: string) {
     return false;
   }
 }
+
+export async function fetchCartItems() {
+  const { getCartItemsForUser } = await import("@/lib/data");
+  return await getCartItemsForUser();
+}

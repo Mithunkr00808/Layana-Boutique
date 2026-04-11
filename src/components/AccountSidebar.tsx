@@ -99,10 +99,6 @@ export default function AccountSidebar({ active, email }: Props) {
                 <Heart size={16} strokeWidth={1.5} /> Saved Items
               </Link>
             </li>
-            <li className={baseLink + " text-[var(--color-on-surface-variant,#434653)]"}>
-              {/* Placeholder for sustainability */}
-              <span className="text-[10px]">Sustainability</span>
-            </li>
           </ul>
         </div>
 
