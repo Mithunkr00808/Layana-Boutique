@@ -101,7 +101,7 @@ export default function AdminLoginClient() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="w-full rounded-xl border-none bg-[#fbf9f8] py-4 pl-12 pr-4 text-sm outline-none transition-all focus:ring-1 focus:ring-black"
-                placeholder="admin@layanaboutique.com"
+                placeholder="admin@example.com"
               />
             </div>
           </div>

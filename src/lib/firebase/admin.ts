@@ -1,9 +1,4 @@
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 import * as admin from "firebase-admin";
-
-// Load environment variables from .env.local if not already loaded (useful for scripts)
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const projectId =
   process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
