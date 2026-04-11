@@ -40,7 +40,7 @@ export function WebSiteJsonLd() {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${BASE_URL}/ready-to-wear?q={search_term_string}`,
+        urlTemplate: `${BASE_URL}/collections/sarees?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },

@@ -79,12 +79,12 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       <BreadcrumbJsonLd
         items={[
           { name: "Home", href: "/" },
-          { name: "Shop", href: "/ready-to-wear" },
+          { name: "Shop", href: "/collections/sarees" },
           { name: product.name, href: `/product/${id}` },
         ]}
       />
       <Navbar />
-      <main className="flex-grow max-w-[1440px] mx-auto px-10 w-full pt-12">
+      <main className="flex-grow max-w-[1440px] mx-auto px-6 md:px-10 w-full pt-24 pb-20">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-20">
           <ProductGallery images={product.images} />
           <ProductDetails {...product} id={product.id} primaryImage={primaryImage} />

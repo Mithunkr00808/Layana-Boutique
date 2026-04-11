@@ -54,7 +54,7 @@ export default function HeroSlider({ images }: { images: HeroImage[] }) {
         <p className="text-white/70 text-sm tracking-[0.2em] uppercase font-sans mb-8">Curated by Layana Boutique</p>
         <Link 
           href={SHOP_CATALOG_PATH} 
-          className="group relative inline-block px-10 py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-container)] text-white text-xs tracking-widest uppercase font-semibold overflow-hidden transition-all duration-300 active:scale-95"
+          className="group relative inline-block px-10 py-4 border border-white/80 bg-white/10 backdrop-blur-sm text-white text-xs tracking-widest uppercase font-semibold overflow-hidden transition-all duration-300 hover:bg-white hover:text-zinc-900 active:scale-95"
         >
           <span className="relative z-10">Shop Now</span>
           <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>

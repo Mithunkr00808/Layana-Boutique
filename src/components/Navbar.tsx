@@ -30,7 +30,7 @@ export default function Navbar() {
         <div className="flex items-center gap-14">
           <Link 
             href="/" 
-            className={`font-serif text-3xl font-light tracking-tighter transition-colors duration-500 ${useWhiteText ? 'text-white' : 'text-zinc-900 hover:opacity-70'}`}
+            className={`font-serif text-3xl font-light tracking-tighter uppercase transition-colors duration-500 ${useWhiteText ? 'text-white' : 'text-zinc-900 hover:opacity-70'}`}
           >
             Layana Boutique
           </Link>

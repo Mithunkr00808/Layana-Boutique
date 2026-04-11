@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { getReadyToWearProducts } from "@/lib/data";
 import Navbar from "@/components/Navbar";
+import SortSelect from "@/components/SortSelect";
 import { BreadcrumbJsonLd } from "@/components/seo/jsonld";
 import {
   PRODUCT_CATEGORY_OPTIONS,
@@ -23,9 +24,37 @@ const collectionRedirects: Record<string, string> = {
 
 type CategoryCollectionPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string }>;
 };
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://layanaboutique.com";
+
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
+  { value: "name-asc", label: "Name: A to Z" },
+] as const;
+
+function parsePrice(price: string): number {
+  const num = parseFloat((price || "0").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(num) ? num : 0;
+}
+
+function sortProducts(products: Awaited<ReturnType<typeof getReadyToWearProducts>>, sort: string) {
+  const sorted = [...products];
+  switch (sort) {
+    case "price-asc":
+      return sorted.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+    case "price-desc":
+      return sorted.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+    case "name-asc":
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    case "newest":
+    default:
+      return sorted;
+  }
+}
 
 export async function generateMetadata({
   params,
@@ -74,8 +103,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function CollectionPage({ params }: CategoryCollectionPageProps) {
+export default async function CollectionPage({ params, searchParams }: CategoryCollectionPageProps) {
   const { slug } = await params;
+  const { sort: sortParam } = await searchParams;
+  const activeSort = sortParam || "newest";
   const redirectTarget = collectionRedirects[slug];
 
   if (redirectTarget) {
@@ -93,7 +124,8 @@ export default async function CollectionPage({ params }: CategoryCollectionPageP
   }
 
   const config = getProductCategoryConfig(category);
-  const products = await getReadyToWearProducts({ category });
+  const rawProducts = await getReadyToWearProducts({ category });
+  const products = sortProducts(rawProducts, activeSort);
   const currentYear = new Date().getFullYear();
 
   return (
@@ -101,7 +133,7 @@ export default async function CollectionPage({ params }: CategoryCollectionPageP
       <BreadcrumbJsonLd
         items={[
           { name: "Home", href: "/" },
-          { name: "Collections", href: "/ready-to-wear" },
+          { name: "Collections", href: "/collections/sarees" },
           { name: config.label, href: `/collections/${category}` },
         ]}
       />
@@ -148,25 +180,14 @@ export default async function CollectionPage({ params }: CategoryCollectionPageP
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <span className="font-sans text-xs uppercase tracking-widest text-[var(--color-secondary)]">
-              Sort by:
-            </span>
-            <button
-              type="button"
-              className="flex items-center gap-2 font-sans text-xs uppercase tracking-widest text-[var(--color-on-surface)]"
-            >
-              <span>Newest</span>
-              <ChevronDown className="size-4" strokeWidth={1.5} />
-            </button>
-          </div>
+          <SortSelect activeSort={activeSort} />
         </section>
 
         <section className="mb-40 grid grid-cols-1 gap-x-6 gap-y-20 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {products.length > 0 ? (
             products.map((product) => (
               <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer">
-                <div className="relative mb-6 aspect-[3/4] overflow-hidden bg-[var(--color-surface-container-low)]">
+                <div className="relative mb-6 aspect-[3/4] overflow-hidden rounded-2xl bg-[var(--color-surface-container-low)]">
                   {product.image ? (
                     <Image
                       src={product.image}

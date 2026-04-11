@@ -121,7 +121,7 @@ export default async function OrderConfirmationPage({ params }: { params: { orde
 
             <div className="flex gap-3">
               <a
-                href="/ready-to-wear"
+                href="/collections/sarees"
                 className="px-5 py-3 border border-[var(--color-outline-variant)]/40 rounded-full text-sm font-sans tracking-[0.15em] uppercase text-[var(--color-on-surface)] hover:bg-[var(--color-surface-container-low)] transition-colors"
               >
                 Continue Shopping

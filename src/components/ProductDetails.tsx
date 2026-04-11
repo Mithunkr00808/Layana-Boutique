@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useEffect } from "react";
 import { ChevronDown, Minus, Plus } from "lucide-react";
-import { addCartItem, getCartItemQuantity, updateCartItemQuantity, removeCartItem } from "@/app/cart/actions";
+import { addCartItem, getCartItemQuantity } from "@/app/cart/actions";
 import { formatProductCategory } from "@/lib/catalog/categories";
 
 interface SizeProps {
@@ -33,16 +33,29 @@ export default function ProductDetails(props: ProductDetailsProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(initialSize);
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string>("");
-  const [cartQuantity, setCartQuantity] = useState<number>(0);
+
+  // Local quantity — this is the count the user sees and adjusts BEFORE confirming
+  const [localQty, setLocalQty] = useState<number>(1);
+  // Whether the item exists in the cart (synced from server on mount)
+  const [cartSynced, setCartSynced] = useState(false);
 
   const effectiveSize = props.hasSizes === false ? "One Size" : (selectedSize || "");
 
+  // Fetch existing cart quantity on mount / size change (non-blocking)
   useEffect(() => {
-    async function fetchQuantity() {
-      const qty = await getCartItemQuantity(props.id, effectiveSize);
-      setCartQuantity(qty);
-    }
-    fetchQuantity();
+    let cancelled = false;
+    getCartItemQuantity(props.id, effectiveSize).then((qty) => {
+      if (!cancelled) {
+        if (qty > 0) {
+          setLocalQty(qty);
+          setCartSynced(true);
+        } else {
+          setLocalQty(1);
+          setCartSynced(false);
+        }
+      }
+    });
+    return () => { cancelled = true; };
   }, [props.id, effectiveSize]);
 
   const numericPrice = useMemo(() => {
@@ -50,52 +63,58 @@ export default function ProductDetails(props: ProductDetailsProps) {
     return Number.isFinite(numeric) ? numeric : 0;
   }, [props.price]);
 
+  // Use discounted price if available, otherwise fall back to full price
+  const numericEffectivePrice = useMemo(() => {
+    if (props.discountPrice) {
+      const discounted = parseFloat((props.discountPrice || "").replace(/[^\d.]/g, ""));
+      if (Number.isFinite(discounted) && discounted > 0) return discounted;
+    }
+    return numericPrice;
+  }, [props.discountPrice, numericPrice]);
+
   const priceDisplay = useMemo(
-    () => `₹${numericPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    [numericPrice]
+    () =>
+      `₹${numericEffectivePrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    [numericEffectivePrice]
   );
 
-  const handleAddToCart = () => {
+  const handleAddToBag = () => {
     setMessage("");
+    // Optimistic: mark as synced immediately
+    setCartSynced(true);
+
     startTransition(async () => {
       const result = await addCartItem({
         productId: props.id,
         name: props.name,
         variant: props.categoryPath,
         size: effectiveSize,
-        price: numericPrice,
+        price: numericEffectivePrice,
         priceDisplay,
         image: props.primaryImage || "",
         alt: props.name,
+        quantity: localQty,
       });
 
       if (!result.ok) {
-        setMessage("Could not add to bag. Please try again.");
+        setMessage("Could not update bag. Please try again.");
+        setCartSynced(false);
       } else {
-          setMessage("Added to bag");
-          setCartQuantity(prev => prev + 1);
+        setMessage(localQty > 0 ? "Bag updated" : "Removed from bag");
+        setTimeout(() => setMessage(""), 2000);
       }
     });
   };
 
-  const handleUpdateQuantity = (newQty: number) => {
-      setMessage("");
-      startTransition(async () => {
-          const docId = `${props.id}-${effectiveSize || "onesize"}`;
-          let success = false;
-          if (newQty <= 0) {
-              success = await removeCartItem(docId);
-              if (success) setCartQuantity(0);
-          } else {
-              success = await updateCartItemQuantity(docId, newQty);
-              if (success) setCartQuantity(newQty);
-          }
-
-          if (!success) {
-              setMessage("Could not update quantity. Please try again.");
-          }
-      });
+  const decrementQty = () => {
+    setLocalQty((prev) => Math.max(1, prev - 1));
   };
+
+  const incrementQty = () => {
+    setLocalQty((prev) => prev + 1);
+  };
+
+  const isOutOfStock = props.quantity === 0;
 
   return (
     <div className="md:col-span-5 relative">
@@ -170,43 +189,49 @@ export default function ProductDetails(props: ProductDetailsProps) {
           </div>
         )}
 
-        {/* CTA */}
-        <div className="pt-6 space-y-4">
-          {cartQuantity > 0 ? (
-            <div className="flex items-center gap-4">
-               <div className="flex-1 flex items-center justify-between border border-[var(--color-outline-variant)]/40 p-4 rounded-sm">
-                   <button
-                     onClick={() => handleUpdateQuantity(cartQuantity - 1)}
-                     disabled={isPending}
-                     className="p-1 hover:bg-[var(--color-surface-container-high)] rounded-full transition-colors disabled:opacity-50"
-                     aria-label="Decrease quantity"
-                   >
-                     <Minus size={16} strokeWidth={1.5} />
-                   </button>
-                   <span className="font-sans text-sm font-medium tabular-nums">{cartQuantity}</span>
-                   <button
-                     onClick={() => handleUpdateQuantity(cartQuantity + 1)}
-                     disabled={isPending}
-                     className="p-1 hover:bg-[var(--color-surface-container-high)] rounded-full transition-colors disabled:opacity-50"
-                     aria-label="Increase quantity"
-                   >
-                     <Plus size={16} strokeWidth={1.5} />
-                   </button>
-               </div>
-            </div>
-          ) : (
+        {/* CTA — Quantity selector + Add to Bag */}
+        <div className="pt-2 space-y-4">
+          <div className="flex items-center gap-4">
+            {/* Add to Bag button — always on the left, text never changes */}
             <button
-              onClick={handleAddToCart}
-              disabled={isPending || !numericPrice || props.quantity === 0}
-              className="w-full bg-[var(--color-primary)] text-[var(--color-on-primary)] py-5 rounded-sm font-sans text-xs uppercase tracking-widest transition-all active:scale-[0.99] hover:opacity-90 disabled:opacity-50"
+              onClick={handleAddToBag}
+              disabled={isPending || !numericPrice || isOutOfStock || localQty <= 0}
+              className="flex-1 bg-[var(--color-on-surface)] text-[var(--color-surface)] py-[18px] rounded-sm font-sans text-xs uppercase tracking-widest transition-all active:scale-[0.99] hover:opacity-90 disabled:opacity-50"
             >
-              {props.quantity === 0 ? "OUT OF STOCK" : (isPending ? "Adding..." : "Add to Bag")}
+              {isOutOfStock ? "OUT OF STOCK" : isPending ? "Adding..." : "Add to Bag"}
             </button>
-          )}
+
+            {/* Quantity selector — always on the right */}
+            <div className="flex items-center border border-[var(--color-outline-variant)]/40 rounded-sm">
+              <button
+                onClick={decrementQty}
+                disabled={localQty <= 1 || isOutOfStock}
+                className="px-4 py-4 hover:bg-[var(--color-surface-container-high)] transition-colors disabled:opacity-30"
+                aria-label="Decrease quantity"
+              >
+                <Minus size={14} strokeWidth={1.5} />
+              </button>
+              <span className="px-5 font-sans text-sm font-medium tabular-nums min-w-[1.5rem] text-center select-none">
+                {localQty}
+              </span>
+              <button
+                onClick={incrementQty}
+                disabled={isOutOfStock}
+                className="px-4 py-4 hover:bg-[var(--color-surface-container-high)] transition-colors disabled:opacity-30"
+                aria-label="Increase quantity"
+              >
+                <Plus size={14} strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+
           {message && (
-            <p className="text-xs text-[var(--color-secondary)] font-sans">{message}</p>
+            <p className={`text-xs font-sans transition-opacity ${message.includes("Could not") ? "text-red-500" : "text-green-600"}`}>
+              {message}
+            </p>
           )}
         </div>
+
         <p className="text-[10px] text-center text-[var(--color-on-surface-variant)] font-sans tracking-widest uppercase">
           Free complimentary shipping and returns on all orders
         </p>

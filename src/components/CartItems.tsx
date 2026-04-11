@@ -40,7 +40,7 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
     <div className="lg:col-span-8">
       <div className="w-full">
         {/* Table Header */}
-        <div className="grid grid-cols-6 pb-6 text-xs font-sans tracking-widest uppercase text-[var(--color-secondary)] border-b border-[var(--color-outline-variant)]/20">
+        <div className="grid grid-cols-6 pb-6 text-xs font-sans tracking-widest uppercase text-zinc-500 border-b border-[var(--color-outline-variant)]/20">
           <div className="col-span-3">Product</div>
           <div className="text-center">Size</div>
           <div className="text-center">Quantity</div>
@@ -62,7 +62,7 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
               </div>
               <div>
                 <h3 className="font-serif text-lg text-[var(--color-on-surface)] mb-1">{item.name}</h3>
-                <p className="font-sans text-xs text-[var(--color-secondary)] tracking-wide uppercase">{item.variant}</p>
+                <p className="font-sans text-xs text-zinc-500 tracking-wide uppercase">{item.variant}</p>
                 <button
                   onClick={() => handleRemove(item.id)}
                   disabled={isPending}
@@ -81,7 +81,7 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
               <button 
                 onClick={() => handleUpdateQuantity(item.id, item.quantity, -1)}
                 disabled={isPending || item.quantity <= 1}
-                className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
+                className="text-zinc-500 hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
               >
                 <Minus strokeWidth={1.5} size={16} />
               </button>
@@ -91,7 +91,7 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
               <button 
                 onClick={() => handleUpdateQuantity(item.id, item.quantity, 1)}
                 disabled={isPending}
-                className="text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
+                className="text-zinc-500 hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
               >
                 <Plus strokeWidth={1.5} size={16} />
               </button>
@@ -107,10 +107,10 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
         <Truck strokeWidth={1} size={24} className="text-[var(--color-primary)] shrink-0" />
         <div>
           <p className="font-sans text-xs tracking-widest uppercase text-[var(--color-on-surface)] font-semibold mb-1">
-            Complimentary White Glove Delivery
+            Expected Delivery
           </p>
-          <p className="text-xs text-[var(--color-secondary)] font-sans leading-relaxed">
-            Your selection qualifies for our signature concierge delivery service. Expect arrival within 3-5 business days.
+          <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+            Expect arrival within 3-7 business days.
           </p>
         </div>
       </div>

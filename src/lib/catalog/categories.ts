@@ -1,4 +1,4 @@
-export const SHOP_CATALOG_PATH = "/ready-to-wear";
+export const SHOP_CATALOG_PATH = "/collections/sarees";
 export const CATEGORY_COLLECTION_PATH = "/collections";
 
 export const PRODUCT_CATEGORY_OPTIONS = [

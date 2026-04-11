@@ -24,6 +24,7 @@ import {
   PRODUCT_CATEGORY_OPTIONS,
   isKnownProductCategory,
 } from "@/lib/catalog/categories";
+import { getCloudinarySignature } from "@/app/admin/cloudinary-actions";
 import type { ProductMedia } from "@/types/product-media";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -115,6 +116,10 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
   });
   const [optionsValue, setOptionsValue] = useState(initialData?.options || "");
   const [enableSizes, setEnableSizes] = useState(initialData?.hasSizes ?? true);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [eagerUploadResults, setEagerUploadResults] = useState<Record<string, ProductMedia>>({});
+  const eagerUploadResultsRef = useRef<Record<string, ProductMedia>>({});
 
   const isEditing = !!initialData?.id;
   const selectedCategory = isKnownProductCategory(initialData?.categoryPath || initialData?.category)
@@ -189,10 +194,14 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
     const nextPendingItems: PendingFormMedia[] = files.slice(0, remainingSlots).map((file, index) => {
       const previewUrl = URL.createObjectURL(file);
       const resourceType = file.type.startsWith("video/") ? "video" : "image";
+      const clientKey = `pending:${Date.now()}:${index}:${file.name}`;
+
+      // Start the upload immediately (Eager Uploading)
+      startMediaUpload(file, clientKey, resourceType);
 
       return {
         kind: "pending",
-        clientKey: `pending:${Date.now()}:${index}:${file.name}`,
+        clientKey,
         file,
         previewUrl,
         src: previewUrl,
@@ -203,6 +212,89 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
     });
 
     updateMediaOrder([...mediaItems, ...nextPendingItems]);
+  }
+
+  /**
+   * Performs the actual upload to Cloudinary.
+   * Now called immediately when a file is selected.
+   */
+  async function startMediaUpload(file: File, clientKey: string, resourceType: "video" | "image") {
+    try {
+      // Step 1: Get secure signature
+      // We strictly sign only folder and timestamp to match Cloudinary's expected verify string
+      const { signature, timestamp, cloudName, apiKey } = await getCloudinarySignature({
+        folder: "products",
+      });
+
+      // Step 2: Upload via XHR for progress tracking
+      const result = await new Promise<ProductMedia>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open(
+          "POST",
+          `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`
+        );
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const pct = Math.round((event.loaded / event.total) * 100);
+            // Skip showing progress for instant uploads — only show if not already at 100%
+            if (pct < 100) {
+              setUploadProgress((prev) => ({ ...prev, [clientKey]: pct }));
+            }
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const response = JSON.parse(xhr.responseText);
+            resolve({
+              src: response.secure_url,
+              alt: file.name,
+              publicId: response.public_id,
+              resourceType: response.resource_type,
+              format: response.format,
+              width: response.width,
+              height: response.height,
+              bytes: response.bytes,
+              duration: response.duration,
+              type: "large",
+            });
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(`Cloudinary error: ${errorData.error?.message || xhr.statusText}`));
+            } catch {
+              reject(new Error(`Cloudinary upload failed with status ${xhr.status}: ${xhr.statusText}`));
+            }
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error during upload. Please check your connection or CSP settings."));
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("signature", signature);
+        formData.append("timestamp", timestamp.toString());
+        formData.append("api_key", apiKey);
+        formData.append("folder", "products");
+
+        xhr.send(formData);
+      });
+
+      // Step 3: Store the result for the final save
+      const updated = { ...eagerUploadResultsRef.current, [clientKey]: result };
+      eagerUploadResultsRef.current = updated;
+      setEagerUploadResults(updated);
+    } catch (err: any) {
+      console.error("Eager upload error:", err);
+      setError(`Failed to upload "${file.name}": ${err.message}`);
+      // Remove progress on failure to allow retry if selection is re-made
+      setUploadProgress((prev) => {
+        const next = { ...prev };
+        delete next[clientKey];
+        return next;
+      });
+    }
   }
 
   function removeMedia(clientKey: string) {
@@ -237,44 +329,74 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
-    const existingMedia = mediaItems
-      .filter((item): item is ExistingFormMedia => item.kind === "existing")
-      .map((item) => ({
-        clientKey: item.clientKey,
-        src: item.src,
-        alt: item.alt,
-        type: item.type,
-        resourceType: item.resourceType,
-        publicId: item.publicId,
-        poster: item.poster,
-        format: item.format,
-        width: item.width,
-        height: item.height,
-        bytes: item.bytes,
-        duration: item.duration,
-      }));
     const pendingMedia = mediaItems.filter((item): item is PendingFormMedia => item.kind === "pending");
-
-    formData.set("existingMedia", JSON.stringify(existingMedia));
-    formData.set(
-      "pendingMediaKeys",
-      JSON.stringify(pendingMedia.map((item) => item.clientKey))
-    );
-    formData.set(
-      "mediaOrder",
-      JSON.stringify(mediaItems.map((item) => item.clientKey))
-    );
-
-    pendingMedia.forEach((item) => {
-      formData.append("mediaFiles", item.file, item.file.name);
-    });
-
     setError(null);
     setIsSubmitting(true);
 
     try {
+      // Step 1: Wait for any eager uploads that are still in progress
+      if (pendingMedia.length > 0) {
+        const allCompleted = pendingMedia.every(item => eagerUploadResultsRef.current[item.clientKey]);
+        
+        if (!allCompleted) {
+          setUploadStatus("Waiting for media uploads to complete...");
+          
+          // Poll using the ref (not state) to avoid stale closure reads
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Upload timed out. Please try again.")), 600000); // 10 min
+            const interval = setInterval(() => {
+              const currentMedia = mediaItemsRef.current.filter((item): item is PendingFormMedia => item.kind === "pending");
+              if (currentMedia.every(item => eagerUploadResultsRef.current[item.clientKey])) {
+                clearInterval(interval);
+                clearTimeout(timeout);
+                resolve();
+              }
+            }, 500);
+          });
+        }
+      }
+
+      // Step 2: Send metadata to server to finalize database save
+      setUploadStatus("Finalizing product details...");
+      
+      const form = event.currentTarget;
+      const formData = new FormData();
+      
+      formData.set("name", (form.elements.namedItem("name") as HTMLInputElement).value);
+      formData.set("description", (form.elements.namedItem("description") as HTMLTextAreaElement).value);
+      formData.set("price", (form.elements.namedItem("price") as HTMLInputElement).value);
+      formData.set("discountPrice", (form.elements.namedItem("discountPrice") as HTMLInputElement).value);
+      formData.set("quantity", (form.elements.namedItem("quantity") as HTMLInputElement).value);
+      formData.set("category", (form.elements.namedItem("category") as HTMLSelectElement).value);
+      formData.set("sustainability", (form.elements.namedItem("sustainability") as HTMLInputElement).value);
+      formData.set("options", optionsValue);
+      formData.set("sizes", sizesValue);
+      formData.set("enableSizes", enableSizes ? "on" : "off");
+
+      const existingMedia = mediaItems
+        .filter((item): item is ExistingFormMedia => item.kind === "existing")
+        .map((item) => ({
+          clientKey: item.clientKey,
+          src: item.src,
+          alt: item.alt,
+          type: item.type,
+          resourceType: item.resourceType,
+          publicId: item.publicId,
+          poster: item.poster,
+          format: item.format,
+          width: item.width,
+          height: item.height,
+          bytes: item.bytes,
+          duration: item.duration,
+        }));
+
+      formData.set("existingMedia", JSON.stringify(existingMedia));
+      formData.set("pendingMediaKeys", JSON.stringify(pendingMedia.map((item) => item.clientKey)));
+      formData.set("mediaOrder", JSON.stringify(mediaItems.map((item) => item.clientKey)));
+      formData.set("uploadedMediaData", JSON.stringify(eagerUploadResultsRef.current)); // Use the ref for the latest data
+
       const result = await saveCatalogItem(formData, isEditing ? initialData.id : undefined);
+      
       if (result.success) {
         router.replace("/admin/catalog");
       } else {
@@ -282,9 +404,10 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
       }
     } catch (err: unknown) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Save failed. Please check your connection and try again.");
     } finally {
       setIsSubmitting(false);
+      setUploadStatus(null);
     }
   }
 
@@ -309,7 +432,7 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-12 gap-8">
+    <form onSubmit={handleSubmit} className="grid grid-cols-12 gap-8 pb-40">
       {error ? (
         <div className="col-span-12 rounded-lg border border-[var(--color-error)]/20 bg-[var(--color-error-container)] px-5 py-4 text-sm text-[var(--color-on-error-container)]">
           {error}
@@ -477,6 +600,12 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
             {mediaItems.length > 0 ? (
               mediaItems.map((item, index) => {
                 const isVideo = item.resourceType === "video";
+                const eagerResult = item.kind === "pending" ? eagerUploadResults[item.clientKey] : null;
+                const progress = uploadProgress[item.clientKey];
+                const isUploading = item.kind === "pending" && progress !== undefined && !eagerResult;
+                // Use the final Cloudinary URL if the eager upload is done, otherwise use preview/existing
+                const mediaSrc = eagerResult?.src 
+                  || (item.kind === "pending" ? item.previewUrl : item.src);
 
                 return (
                   <div
@@ -485,20 +614,44 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
                   >
                     {isVideo ? (
                       <video
-                        src={item.kind === "pending" ? item.previewUrl : item.src}
-                        poster={item.poster}
+                        src={mediaSrc}
+                        poster={eagerResult?.poster || item.poster}
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         muted
                         playsInline
-                        preload="metadata"
+                        autoPlay
+                        loop
+                        preload="auto"
                       />
                     ) : (
                       <Image
-                        src={item.kind === "pending" ? item.previewUrl : item.src}
+                        src={mediaSrc}
                         alt={item.alt}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
                       />
+                    )}
+
+                    {isUploading && (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 px-4 text-center backdrop-blur-sm">
+                        <div className="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                          <div 
+                            className="h-full bg-[var(--color-primary)] transition-all duration-300" 
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white">
+                          {isVideo ? `${progress}% — Processing video` : `${progress}%`}
+                        </span>
+                      </div>
+                    )}
+
+                    {eagerResult && item.kind === "pending" && (
+                      <div className="absolute bottom-3 right-3 z-10 rounded-full bg-green-500/90 p-1.5 shadow-lg">
+                        <svg className="size-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
                     )}
 
                     <div className="absolute left-3 top-3 flex items-center gap-2">
@@ -568,7 +721,7 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
             <label className="col-span-2 flex aspect-video cursor-pointer flex-col items-center justify-center border-2 border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-lowest)] transition-all duration-300 hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-container-high)]">
               <ImageUp className="mb-2 size-8 text-[var(--color-on-surface-variant)]" />
               <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
-                Upload Cloudinary assets
+                Upload Layana Boutique&apos;s assets
               </span>
               <span className="mt-1 text-[0.6rem] italic text-[var(--color-on-surface-variant)]/40">
                 Images and videos, up to {MAX_MEDIA_ITEMS} assets total
@@ -705,24 +858,32 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
 
       <footer className="fixed bottom-0 right-0 z-40 flex w-[calc(100%-16rem)] items-center justify-between border-t border-[var(--color-outline-variant)]/10 bg-[#fbf9f8]/90 px-10 py-6 backdrop-blur-lg">
         <div className="flex items-center gap-4 text-[var(--color-on-surface-variant)]">
-          {isEditing ? (
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="flex items-center gap-2 text-[0.65rem] font-medium tracking-tight text-[var(--color-error)]"
-            >
-              <Trash className="size-4" />
-              Delete product
-            </button>
-          ) : (
-            <>
-              <div className="h-2 w-2 rounded-full bg-[var(--color-primary)]/50" />
-              <span className="text-[0.65rem] font-medium tracking-tight">
-                Ready for atelier publication
-              </span>
-            </>
-          )}
-        </div>
+            {isEditing ? (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="flex items-center gap-2 text-[0.65rem] font-medium tracking-tight text-[var(--color-error)]"
+              >
+                <Trash className="size-4" />
+                Delete product
+              </button>
+            ) : (
+              <>
+                <div className="h-2 w-2 rounded-full bg-[var(--color-primary)]/50" />
+                <span className="text-[0.65rem] font-medium tracking-tight">
+                  {uploadStatus || "Ready for atelier publication"}
+                </span>
+              </>
+            )}
+            {uploadStatus && isEditing && (
+              <div className="flex items-center gap-2">
+                <Loader2 className="size-3 animate-spin text-[var(--color-primary)]" />
+                <span className="text-[0.65rem] font-medium tracking-tight text-[var(--color-primary)]">
+                  {uploadStatus}
+                </span>
+              </div>
+            )}
+          </div>
 
         <div className="flex items-center gap-6">
           <button

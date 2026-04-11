@@ -105,7 +105,7 @@ export default function WishlistPage() {
                   Save products to curate your look. They will appear here.
                 </p>
                 <a
-                  href="/ready-to-wear"
+                  href="/collections/sarees"
                   className="inline-flex px-6 py-3 bg-blue-900 text-white rounded-full text-xs tracking-[0.2em] uppercase hover:opacity-90 transition"
                 >
                   Browse collection
@@ -172,7 +172,7 @@ export default function WishlistPage() {
                     Discover pieces curated based on your recently saved aesthetic.
                   </p>
                   <a
-                    href="/ready-to-wear"
+                    href="/collections/sarees"
                     className="px-8 py-3 bg-blue-900 text-white text-[11px] font-sans uppercase tracking-widest rounded-lg hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10"
                   >
                     Explore Recommendations

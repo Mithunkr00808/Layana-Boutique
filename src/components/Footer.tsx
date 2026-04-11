@@ -41,7 +41,7 @@ export default function Footer({ social }: FooterProps) {
           <Link href="/" className="font-serif text-xl italic text-zinc-900">
             Layana Boutique
           </Link>
-          <p className="font-sans text-xs text-[var(--color-secondary)] leading-relaxed uppercase tracking-widest">
+          <p className="font-sans text-xs text-zinc-500 leading-relaxed uppercase tracking-widest">
             Curating the future of <br />
             conscious luxury.
           </p>
@@ -55,12 +55,12 @@ export default function Footer({ social }: FooterProps) {
             <Link
               key={category.value}
               href={getCategoryHref(category.value)}
-              className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] hover:text-zinc-900 underline-offset-4 hover:underline transition-all"
+              className="font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 underline-offset-4 hover:underline transition-all"
             >
               {category.label}
             </Link>
           ))}
-          <Link href="/cart" className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] hover:text-zinc-900 underline-offset-4 hover:underline transition-all">
+          <Link href="/cart" className="font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 underline-offset-4 hover:underline transition-all">
             Your Bag
           </Link>
         </div>
@@ -76,7 +76,7 @@ export default function Footer({ social }: FooterProps) {
                   href={social.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] hover:text-zinc-900 transition-all"
+                  className="flex items-center gap-2 font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 transition-all"
                 >
                   <InstagramIcon />
                   Instagram
@@ -87,7 +87,7 @@ export default function Footer({ social }: FooterProps) {
                   href={social.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] hover:text-zinc-900 transition-all"
+                  className="flex items-center gap-2 font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 transition-all"
                 >
                   <FacebookIcon />
                   Facebook
@@ -96,7 +96,7 @@ export default function Footer({ social }: FooterProps) {
               {social?.email && (
                 <a
                   href={`mailto:${social.email}`}
-                  className="flex items-center gap-2 font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] hover:text-zinc-900 transition-all"
+                  className="flex items-center gap-2 font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 transition-all"
                 >
                   <Mail size={15} strokeWidth={2} />
                   Email Us
@@ -105,13 +105,13 @@ export default function Footer({ social }: FooterProps) {
             </>
           ) : (
             <>
-              <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] opacity-50 cursor-default">
+              <span className="font-sans text-xs tracking-widest uppercase text-zinc-500 opacity-50 cursor-default">
                 Instagram — Coming Soon
               </span>
-              <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] opacity-50 cursor-default">
+              <span className="font-sans text-xs tracking-widest uppercase text-zinc-500 opacity-50 cursor-default">
                 Facebook — Coming Soon
               </span>
-              <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)] opacity-50 cursor-default">
+              <span className="font-sans text-xs tracking-widest uppercase text-zinc-500 opacity-50 cursor-default">
                 Email — Coming Soon
               </span>
             </>
@@ -136,7 +136,7 @@ export default function Footer({ social }: FooterProps) {
       </div>
 
       <div className="max-w-[1440px] mx-auto px-10 mt-20">
-        <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-[var(--color-secondary)] text-center">
+        <p className="font-sans text-[9px] tracking-[0.3em] uppercase text-zinc-500 text-center">
           © {currentYear} LAYANA BOUTIQUE. ALL RIGHTS RESERVED.
         </p>
       </div>

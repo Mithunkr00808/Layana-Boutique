@@ -121,6 +121,7 @@ export async function addCartItem(input: {
   priceDisplay?: string;
   image?: string;
   alt?: string;
+  quantity?: number; // If provided, sets this exact quantity instead of incrementing
 }) {
   if (!process.env.FIREBASE_PROJECT_ID) {
     console.warn("No FIREBASE_PROJECT_ID found. Cannot add cart item.");
@@ -138,9 +139,16 @@ export async function addCartItem(input: {
     const docId = `${input.productId}-${input.size || "onesize"}`;
     const docRef = cartCollection.doc(docId);
 
-    const existingSnap = await docRef.get();
-    const existingQty = existingSnap.exists ? (existingSnap.data()?.quantity as number | undefined) ?? 0 : 0;
+    const desiredQty = input.quantity ?? 1;
 
+    if (desiredQty <= 0) {
+      // Remove item from cart
+      await docRef.delete();
+      revalidatePath("/cart");
+      return { ok: true };
+    }
+
+    // Single write — no read needed
     await docRef.set(
       {
         id: docId,
@@ -148,7 +156,7 @@ export async function addCartItem(input: {
         name: input.name,
         variant: input.variant || "",
         size: input.size || "",
-        quantity: Math.max(1, existingQty + 1),
+        quantity: desiredQty,
         price: input.priceDisplay || `₹${input.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
         rawPrice: input.price,
         image: input.image || "",

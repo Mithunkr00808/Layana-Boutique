@@ -15,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: `${BASE_URL}/ready-to-wear`,
+      url: `${BASE_URL}/collections/sarees`,
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.9,

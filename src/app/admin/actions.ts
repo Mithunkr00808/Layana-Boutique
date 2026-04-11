@@ -13,6 +13,7 @@ import {
   isCloudinaryConfigured,
   uploadProductMedia,
 } from "@/lib/cloudinary";
+
 import { FieldValue } from "firebase-admin/firestore";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { randomUUID } from "crypto";
@@ -182,9 +183,8 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     ]
   );
 
-  if (pendingMediaKeys.length !== mediaFiles.length) {
-    throw new Error("Media payload is invalid. Please retry the upload.");
-  }
+  // The check (pendingMediaKeys.length !== mediaFiles.length) is removed because 
+  // we now support client-side direct uploads where files are NOT sent to the server action.
 
   if (!legacyImageUrl && !isCloudinaryConfigured() && mediaFiles.length > 0) {
     throw new Error("Cloudinary is not configured.");
@@ -195,19 +195,36 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
   }
 
   const uploadedMediaByKey = new Map<string, ProductMedia>();
+  const clientUploadedMediaInput = parseJsonField<Record<string, ProductMedia>>(formData, "uploadedMediaData", {});
+  
+  // Add client-side uploaded media to our key map
+  Object.entries(clientUploadedMediaInput).forEach(([key, data]) => {
+    uploadedMediaByKey.set(key, data);
+  });
 
   try {
-    for (const [index, file] of mediaFiles.entries()) {
-      const uploaded = await uploadProductMedia(file, {
-        category,
-        productId: id,
-        position: index,
-        altBase: name || "Product asset",
-      });
-      uploadedMedia.push(uploaded);
-      uploadedMediaByKey.set(pendingMediaKeys[index], uploaded);
+    // Only perform server-side uploads for files that weren't already uploaded by the client
+    const filesToUploadOnServer = mediaFiles.filter((_, index) => !uploadedMediaByKey.has(pendingMediaKeys[index]));
+    const pendingKeysForServerUpload = pendingMediaKeys.filter((key) => !uploadedMediaByKey.has(key));
+
+    if (filesToUploadOnServer.length > 0) {
+      console.log(`Starting server-side media upload for ${filesToUploadOnServer.length} remaining files. Item ID: ${id}`);
+      for (const [index, file] of filesToUploadOnServer.entries()) {
+        const key = pendingKeysForServerUpload[index];
+        console.log(`Uploading file ${index + 1}/${filesToUploadOnServer.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        const uploaded = await uploadProductMedia(file, {
+          category,
+          productId: id,
+          position: index,
+          altBase: name || "Product asset",
+        });
+        console.log(`Successfully uploaded file ${index + 1} to Cloudinary.`);
+        uploadedMedia.push(uploaded);
+        uploadedMediaByKey.set(key, uploaded);
+      }
     }
   } catch (error) {
+    // If a server-side upload fails, clean up any assets we just uploaded to Cloudinary
     await Promise.allSettled(
       uploadedMedia
         .filter((item) => item.publicId)

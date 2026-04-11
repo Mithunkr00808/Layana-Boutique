@@ -24,7 +24,7 @@ export default async function CartPage() {
           <h1 className="font-serif text-5xl font-light tracking-tighter mb-4 italic text-[var(--color-on-surface)]">
             The Selection
           </h1>
-          <p className="font-sans text-[var(--color-secondary)] text-sm tracking-widest uppercase">
+          <p className="font-sans text-zinc-500 text-sm tracking-widest uppercase">
             Items currently in your curated collection
           </p>
         </header>

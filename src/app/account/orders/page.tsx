@@ -86,7 +86,7 @@ export default async function OrdersPage() {
                 When you place an order, it will appear here with its status and details.
               </p>
               <Link
-                href="/ready-to-wear"
+                href="/collections/sarees"
                 className="inline-flex px-6 py-3 bg-blue-900 text-white rounded-full text-xs tracking-[0.2em] uppercase hover:opacity-90 transition"
               >
                 Continue shopping

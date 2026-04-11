@@ -16,15 +16,15 @@ export default function CartSummary({ items }: { items: CartItemType[] }) {
         <h2 className="font-serif text-2xl font-light mb-8 text-[var(--color-on-surface)]">Summary</h2>
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)]">Subtotal</span>
+            <span className="font-sans text-xs tracking-widest uppercase text-zinc-500">Subtotal</span>
             <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">{formatInr(subtotal)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)]">Shipping</span>
+            <span className="font-sans text-xs tracking-widest uppercase text-zinc-500">Shipping</span>
             <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-on-surface)] font-medium">Complimentary</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-sans text-xs tracking-widest uppercase text-[var(--color-secondary)]">Estimated Tax</span>
+            <span className="font-sans text-xs tracking-widest uppercase text-zinc-500">Estimated Tax</span>
             <span className="font-sans font-medium text-lg text-[var(--color-on-surface)]">₹0.00</span>
           </div>
 
@@ -42,10 +42,10 @@ export default function CartSummary({ items }: { items: CartItemType[] }) {
           </button>
 
           <div className="mt-8 text-center">
-            <p className="font-sans text-[10px] text-[var(--color-secondary)] tracking-widest uppercase mb-4">
+            <p className="font-sans text-[10px] text-zinc-500 tracking-widest uppercase mb-4">
               Secure Payment Options
             </p>
-            <div className="flex justify-center gap-4 text-[var(--color-secondary)] opacity-40">
+            <div className="flex justify-center gap-4 text-zinc-500 opacity-40">
               <CreditCard strokeWidth={1.5} size={24} />
               <Building2 strokeWidth={1.5} size={24} />
               <Smartphone strokeWidth={1.5} size={24} />
