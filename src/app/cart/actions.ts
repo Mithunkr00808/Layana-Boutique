@@ -5,6 +5,14 @@ import { getSessionUid } from "@/lib/auth/session-user";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getCartItemsForUser } from "@/lib/data";
+import { FieldValue } from "firebase-admin/firestore";
+
+interface GuestCartItem {
+  id: string;
+  productId: string;
+  size: string;
+  quantity: number;
+}
 
 export async function getGuestId(): Promise<string> {
   const cookieStore = await cookies();
@@ -15,29 +23,44 @@ export async function getGuestId(): Promise<string> {
   return id;
 }
 
-export async function updateCartItemQuantity(id: string, newQuantity: number) {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    console.warn("No FIREBASE_PROJECT_ID found. Cannot update quantity in Firebase.");
-    return false;
+export async function getGuestCartCookie(): Promise<GuestCartItem[]> {
+  const cookieStore = await cookies();
+  const val = cookieStore.get("guestCart")?.value;
+  if (!val) return [];
+  try {
+    return JSON.parse(val) as GuestCartItem[];
+  } catch {
+    return [];
   }
+}
 
-  if (newQuantity <= 0) {
-    return false;
-  }
+async function setGuestCartCookie(items: GuestCartItem[]) {
+  const cookieStore = await cookies();
+  cookieStore.set("guestCart", JSON.stringify(items), {
+    path: "/",
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  });
+}
+
+export async function updateCartItemQuantity(id: string, newQuantity: number) {
+  if (newQuantity <= 0) return false;
 
   try {
     const uid = await getSessionUid();
-    let docRef;
+    
     if (uid) {
-      docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
+      if (!process.env.FIREBASE_PROJECT_ID) return false;
+      const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
+      await docRef.update({ quantity: newQuantity });
     } else {
-      const guestId = await getGuestId();
-      docRef = adminDb.collection("guest-carts").doc(guestId).collection("items").doc(id);
+      const items = await getGuestCartCookie();
+      const idx = items.findIndex(i => i.id === id);
+      if (idx !== -1) {
+        items[idx].quantity = newQuantity;
+        await setGuestCartCookie(items);
+      }
     }
-
-    await docRef.update({
-      quantity: newQuantity,
-    });
 
     revalidatePath("/cart");
     return true;
@@ -48,26 +71,21 @@ export async function updateCartItemQuantity(id: string, newQuantity: number) {
 }
 
 export async function getCartItemQuantity(productId: string, size?: string) {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    return 0;
-  }
-
   try {
     const uid = await getSessionUid();
-    const guestId = uid ? null : await getGuestId();
-
-    const cartCollection = uid
-      ? adminDb.collection("users").doc(uid).collection("cart")
-      : adminDb.collection("guest-carts").doc(guestId as string).collection("items");
-
     const docId = `${productId}-${size || "onesize"}`;
-    const docRef = cartCollection.doc(docId);
-    const snap = await docRef.get();
 
-    if (snap.exists) {
-      return (snap.data()?.quantity as number | undefined) ?? 0;
+    if (uid) {
+      if (!process.env.FIREBASE_PROJECT_ID) return 0;
+      const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(docId);
+      const snap = await docRef.get();
+      if (snap.exists) return (snap.data()?.quantity as number) ?? 0;
+      return 0;
+    } else {
+      const items = await getGuestCartCookie();
+      const item = items.find(i => i.id === docId);
+      return item?.quantity ?? 0;
     }
-    return 0;
   } catch (error) {
     console.error("Error fetching cart item quantity:", error);
     return 0;
@@ -75,22 +93,18 @@ export async function getCartItemQuantity(productId: string, size?: string) {
 }
 
 export async function removeCartItem(id: string) {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    console.warn("No FIREBASE_PROJECT_ID found. Cannot remove cart item.");
-    return false;
-  }
-
   try {
     const uid = await getSessionUid();
-    let docRef;
+    
     if (uid) {
-      docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
+      if (!process.env.FIREBASE_PROJECT_ID) return false;
+      const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
+      await docRef.delete();
     } else {
-      const guestId = await getGuestId();
-      docRef = adminDb.collection("guest-carts").doc(guestId).collection("items").doc(id);
+      let items = await getGuestCartCookie();
+      items = items.filter(i => i.id !== id);
+      await setGuestCartCookie(items);
     }
-
-    await docRef.delete();
 
     revalidatePath("/cart");
     return true;
@@ -99,8 +113,6 @@ export async function removeCartItem(id: string) {
     return false;
   }
 }
-
-import { FieldValue } from "firebase-admin/firestore";
 
 export async function addCartItem(input: {
   productId: string;
@@ -111,46 +123,53 @@ export async function addCartItem(input: {
   priceDisplay?: string;
   image?: string;
   alt?: string;
-  quantity?: number; // Sets how much to add (default 1)
+  quantity?: number;
   originalPrice?: number;
   originalPriceDisplay?: string;
 }) {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    console.warn("No FIREBASE_PROJECT_ID found. Cannot add cart item.");
-    return { ok: false, reason: "env" as const };
-  }
-
   try {
     const uid = await getSessionUid();
-    const guestId = uid ? null : await getGuestId();
-
-    const cartCollection = uid
-      ? adminDb.collection("users").doc(uid).collection("cart")
-      : adminDb.collection("guest-carts").doc(guestId as string).collection("items");
-
     const docId = `${input.productId}-${input.size || "onesize"}`;
-    const docRef = cartCollection.doc(docId);
-
     const incrementQty = input.quantity && input.quantity > 0 ? input.quantity : 1;
 
-    // Single write — no read needed
-    await docRef.set(
-      {
-        id: docId,
-        productId: input.productId,
-        name: input.name,
-        variant: input.variant || "",
-        size: input.size || "",
-        quantity: FieldValue.increment(incrementQty),
-        price: input.priceDisplay || `₹${input.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-        rawPrice: input.price,
-        image: input.image || "",
-        alt: input.alt || input.name,
-        originalPrice: input.originalPriceDisplay || null,
-        rawOriginalPrice: input.originalPrice || null,
-      },
-      { merge: true }
-    );
+    if (uid) {
+      if (!process.env.FIREBASE_PROJECT_ID) return { ok: false, reason: "env" as const };
+      const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(docId);
+      
+      await docRef.set(
+        {
+          id: docId,
+          productId: input.productId,
+          name: input.name,
+          variant: input.variant || "",
+          size: input.size || "",
+          quantity: FieldValue.increment(incrementQty),
+          price: input.priceDisplay || `₹${input.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+          rawPrice: input.price,
+          image: input.image || "",
+          alt: input.alt || input.name,
+          originalPrice: input.originalPriceDisplay || null,
+          rawOriginalPrice: input.originalPrice || null,
+        },
+        { merge: true }
+      );
+    } else {
+      const items = await getGuestCartCookie();
+      const existing = items.find(i => i.id === docId);
+      
+      if (existing) {
+        existing.quantity += incrementQty;
+      } else {
+        items.push({
+          id: docId,
+          productId: input.productId,
+          size: input.size || "",
+          quantity: incrementQty
+        });
+      }
+      
+      await setGuestCartCookie(items);
+    }
 
     revalidatePath("/cart");
     return { ok: true };
@@ -161,10 +180,7 @@ export async function addCartItem(input: {
 }
 
 export async function clearUserCart(uid?: string) {
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    console.warn("No FIREBASE_PROJECT_ID found. Cannot clear cart.");
-    return false;
-  }
+  if (!process.env.FIREBASE_PROJECT_ID) return false;
 
   try {
     const sessionUid = await getSessionUid();
@@ -174,14 +190,11 @@ export async function clearUserCart(uid?: string) {
     const cartCollection = adminDb.collection("users").doc(sessionUid).collection("cart");
     const snapshot = await cartCollection.get();
 
-    if (snapshot.empty) {
-      revalidatePath("/cart");
-      return true;
+    if (!snapshot.empty) {
+      const batch = adminDb.batch();
+      snapshot.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
     }
-
-    const batch = adminDb.batch();
-    snapshot.forEach((doc) => batch.delete(doc.ref));
-    await batch.commit();
 
     revalidatePath("/cart");
     return true;

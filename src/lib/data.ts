@@ -460,20 +460,47 @@ export async function getCartItemsForUser(): Promise<CartItem[]> {
       return await getCartItems(uid);
     }
 
-    // Fallback to guest cart
+    // Fallback to guest cart cookie
     const cookieStore = await cookies();
-    const guestId = cookieStore.get('guestId')?.value;
-    if (!guestId) return [];
+    const val = cookieStore.get('guestCart')?.value;
+    if (!val) return [];
 
-    const snapshot = await adminDb
-      .collection('guest-carts')
-      .doc(guestId)
-      .collection('items')
-      .get();
+    let items;
+    try {
+      items = JSON.parse(val);
+    } catch {
+      return [];
+    }
 
-    if (snapshot.empty) return [];
+    if (!Array.isArray(items) || items.length === 0) return [];
 
-    return snapshot.docs.map(mapCartDoc);
+    // Hydrate cart item prices and metadata directly from products collection for security
+    const hydratedPromises = items.map(async (item: any) => {
+      const productRef = adminDb.collection('products').doc(item.productId);
+      const snap = await productRef.get();
+      if (!snap.exists) return null;
+
+      const data = snap.data();
+      if (!data) return null;
+      
+      const rawPrice = data.price && typeof data.price === "string" ? parseFloat(data.price.replace(/[^\d.]/g, "")) : 0;
+
+      return {
+        id: item.id || `${item.productId}-${item.size || "onesize"}`,
+        productId: item.productId,
+        name: data.name || "Unknown Item",
+        variant: "",
+        size: item.size || "",
+        quantity: item.quantity,
+        price: formatIndianPrice(data.price),
+        rawPrice: rawPrice,
+        image: data.image || "",
+        alt: data.alt || data.name || "",
+      } as CartItem;
+    });
+
+    const hydrated = await Promise.all(hydratedPromises);
+    return hydrated.filter(Boolean) as CartItem[];
   } catch (error) {
     console.error('Failed to verify session or fetch cart:', error);
     return [];
