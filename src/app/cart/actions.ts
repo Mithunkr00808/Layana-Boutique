@@ -43,14 +43,14 @@ async function setGuestCartCookie(items: GuestCartItem[]) {
   });
 }
 
-export async function updateCartItemQuantity(id: string, newQuantity: number) {
-  if (newQuantity <= 0) return false;
+export async function updateCartItemQuantity(id: string, newQuantity: number): Promise<{ success: boolean; isGuest: boolean }> {
+  if (newQuantity <= 0) return { success: false, isGuest: false };
 
   try {
     const uid = await getSessionUid();
     
     if (uid) {
-      if (!process.env.FIREBASE_PROJECT_ID) return false;
+      if (!process.env.FIREBASE_PROJECT_ID) return { success: false, isGuest: false };
       const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
       await docRef.update({ quantity: newQuantity });
     } else {
@@ -63,10 +63,10 @@ export async function updateCartItemQuantity(id: string, newQuantity: number) {
     }
 
     revalidatePath("/cart");
-    return true;
+    return { success: true, isGuest: !uid };
   } catch (error) {
     console.error("Error updating cart quantity:", error);
-    return false;
+    return { success: false, isGuest: false };
   }
 }
 
@@ -92,12 +92,12 @@ export async function getCartItemQuantity(productId: string, size?: string) {
   }
 }
 
-export async function removeCartItem(id: string) {
+export async function removeCartItem(id: string): Promise<{ success: boolean; isGuest: boolean }> {
   try {
     const uid = await getSessionUid();
     
     if (uid) {
-      if (!process.env.FIREBASE_PROJECT_ID) return false;
+      if (!process.env.FIREBASE_PROJECT_ID) return { success: false, isGuest: false };
       const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
       await docRef.delete();
     } else {
@@ -107,10 +107,10 @@ export async function removeCartItem(id: string) {
     }
 
     revalidatePath("/cart");
-    return true;
+    return { success: true, isGuest: !uid };
   } catch (error) {
     console.error("Error removing cart item:", error);
-    return false;
+    return { success: false, isGuest: false };
   }
 }
 
@@ -133,7 +133,7 @@ export async function addCartItem(input: {
     const incrementQty = input.quantity && input.quantity > 0 ? input.quantity : 1;
 
     if (uid) {
-      if (!process.env.FIREBASE_PROJECT_ID) return { ok: false, reason: "env" as const };
+      if (!process.env.FIREBASE_PROJECT_ID) return { ok: false, reason: "env" as const, isGuest: false };
       const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(docId);
       
       await docRef.set(
@@ -172,10 +172,10 @@ export async function addCartItem(input: {
     }
 
     revalidatePath("/cart");
-    return { ok: true };
+    return { ok: true, isGuest: !uid };
   } catch (error) {
     console.error("Error adding cart item:", error);
-    return { ok: false, reason: "error" as const };
+    return { ok: false, reason: "error" as const, isGuest: false };
   }
 }
 

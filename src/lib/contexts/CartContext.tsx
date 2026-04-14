@@ -75,16 +75,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems(newItems);
 
     startTransition(async () => {
-      await addCartItem(input);
-      await refreshCart();
+      const result = await addCartItem(input);
+      // Only refresh from server for authenticated users.
+      // For guests, the cookie isn't readable in the same request cycle,
+      // so we trust the optimistic update above.
+      if (!result.isGuest) {
+        await refreshCart();
+      }
     });
   };
 
   const removeItem = async (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
     startTransition(async () => {
-      await removeCartItem(id);
-      await refreshCart();
+      const result = await removeCartItem(id);
+      if (!result.isGuest) {
+        await refreshCart();
+      }
     });
   };
 
@@ -98,8 +105,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
 
     startTransition(async () => {
-      await updateCartItemQuantity(id, quantity);
-      await refreshCart();
+      const result = await updateCartItemQuantity(id, quantity);
+      if (!result.isGuest) {
+        await refreshCart();
+      }
     });
   };
 
