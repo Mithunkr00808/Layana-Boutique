@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Truck, Minus, Plus, Loader2 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useCart } from "@/lib/contexts/CartContext";
 
 export interface CartItemType {
@@ -108,10 +108,16 @@ function CartItemRow({ item }: { item: CartItemType }) {
 }
 
 export default function CartItems({ items: serverItems }: { items: CartItemType[] }) {
-  // Use CartContext as the single source of truth.
-  // Fall back to server-rendered items only for the initial render.
+  // Use server-rendered items for the initial render to avoid hydration mismatch.
+  // After mount, switch to CartContext as the single source of truth.
   const { items: contextItems } = useCart();
-  const items = contextItems.length > 0 ? contextItems : serverItems;
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const items = hydrated && contextItems.length > 0 ? contextItems : serverItems;
 
   return (
     <div className="lg:col-span-8">
