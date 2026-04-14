@@ -1,6 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { csrfRejectedResponse, isSameOriginRequest } from "@/lib/security/csrf";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return csrfRejectedResponse();
+  }
+
   const response = NextResponse.json({ status: 'logged out' }, { status: 200 });
   
   // Clear auth cookies with same security flags as creation

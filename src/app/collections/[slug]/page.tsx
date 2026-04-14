@@ -128,6 +128,10 @@ export default async function CollectionPage({ params, searchParams }: CategoryC
   const products = sortProducts(rawProducts, activeSort);
   const currentYear = new Date().getFullYear();
 
+  const activeSubCategories = Array.from(
+    new Set(rawProducts.flatMap((p) => p.subCategories || []))
+  ).filter(Boolean).sort();
+
   return (
     <div className="min-h-screen bg-[var(--color-surface)] font-sans text-[var(--color-on-surface)] antialiased bg-white">
       <BreadcrumbJsonLd
@@ -159,25 +163,21 @@ export default async function CollectionPage({ params, searchParams }: CategoryC
               <SlidersHorizontal className="size-4" strokeWidth={1.5} />
             </button>
 
-            <div className="hidden gap-8 text-xs uppercase tracking-widest text-[var(--color-secondary)] md:flex">
-              {PRODUCT_CATEGORY_OPTIONS.map((option) => {
-                const isActive = option.value === category;
-
-                return (
-                  <Link
-                    key={option.value}
-                href={getCategoryHref(option.value)}
-                className={
-                  isActive
-                    ? "text-[var(--color-on-surface)]"
-                    : "transition-colors hover:text-[var(--color-on-surface)]"
-                }
-              >
-                {option.label}
-              </Link>
-                );
-              })}
-            </div>
+            {activeSubCategories.length > 0 && (
+              <div className="hidden gap-8 text-xs uppercase tracking-widest text-[var(--color-secondary)] md:flex">
+                {activeSubCategories.map((sub) => {
+                  return (
+                    <Link
+                      key={sub}
+                      href={`/collections/${category}?sub=${encodeURIComponent(sub)}`}
+                      className="transition-colors hover:text-[var(--color-on-surface)]"
+                    >
+                      {sub}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <SortSelect activeSort={activeSort} />

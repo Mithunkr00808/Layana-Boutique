@@ -15,7 +15,8 @@ import {
 } from "@/lib/cloudinary";
 
 import { FieldValue } from "firebase-admin/firestore";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { randomUUID } from "crypto";
 import type { ProductMedia } from "@/types/product-media";
 import { productSchema } from "@/lib/schemas/product";
@@ -91,17 +92,24 @@ function normalizeMediaEntries(media: Partial<PersistedMediaInput>[]) {
 }
 
 function selectSummaryImage(media: ProductMedia[]) {
-  const cover = media[0];
-
-  if (!cover) {
+  if (!media.length) {
     return "";
   }
 
-  if (cover.resourceType === "video") {
-    return cover.poster || (cover.publicId ? buildCloudinaryVideoPosterUrl(cover.publicId) : "");
+  // Try each media item in order, preferring images
+  for (const item of media) {
+    if (item.resourceType === "video") {
+      const poster = item.poster || (item.publicId ? buildCloudinaryVideoPosterUrl(item.publicId) : "");
+      if (poster) return poster;
+      // If video has no poster, continue to next item
+      continue;
+    }
+    // Image: use src directly
+    if (item.src) return item.src;
   }
 
-  return cover.src;
+  // No usable image found in any media item
+  return "";
 }
 
 export async function saveCatalogItem(formData: FormData, existingId?: string) {
@@ -282,6 +290,8 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
   const summaryAlt = `${name || "Product"} cover image`;
   const enableSizesStr = formData.get("enableSizes");
   const hasSizes = enableSizesStr === "on" || enableSizesStr === "true";
+  const subCategoriesRaw = formData.get("subCategories")?.toString() || "";
+  const subCategoriesArray = subCategoriesRaw.split(",").map((s) => s.trim()).filter(Boolean);
 
   // Create the Product summary (for lists)
   const summaryPayload: Record<string, unknown> = {
@@ -291,6 +301,7 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     ...(discountPrice ? { discountPrice } : {}),
     quantity,
     category,
+    subCategories: subCategoriesArray,
     image: summaryImage,
     alt: summaryAlt,
     isLimited: false,
@@ -309,10 +320,12 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     ...(discountPrice ? { discountPrice } : {}),
     quantity,
     description,
+    subCategories: subCategoriesArray,
     sustainability: formData.get("sustainability")?.toString() || "Standard production",
     images: orderedMedia,
     sizes,
     hasSizes,
+    materials: formData.get("options")?.toString() || "",
   };
 
   try {
@@ -355,7 +368,6 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
     revalidatePath(`/product/${id}`);
-    // @ts-expect-error - Next.js internal type mismatch
     revalidateTag("products");
 
     return { success: true, id };
@@ -402,7 +414,6 @@ export async function deleteCatalogItem(id: string) {
 
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
-    // @ts-expect-error - Next.js internal type mismatch
     revalidateTag("products");
 
     return { success: true };

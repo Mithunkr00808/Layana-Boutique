@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Navbar from "@/components/Navbar";
 import AccountSidebar from "@/components/AccountSidebar";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminAuth } from "@/lib/firebase/admin";
+import { getSessionClaims } from "@/lib/auth/session-user";
 import { getUserOrders } from "@/lib/data";
 import { Settings, Mail, Sprout } from "lucide-react";
 import Link from "next/link";
@@ -37,27 +37,20 @@ function formatDate(value: any) {
 }
 
 async function getSessionUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
-  if (!sessionCookie) {
+  const claims = await getSessionClaims();
+  if (!claims) {
     redirect("/login?returnUrl=/account");
   }
-  const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-  const uid = decoded.uid;
-  const userRecord = await adminAuth.getUser(uid).catch(() => null);
   const name =
-    userRecord?.displayName ||
-    decoded.name ||
-    decoded.email?.split("@")[0] ||
-    userRecord?.email?.split("@")[0] ||
+    claims.name ||
+    claims.email?.split("@")[0] ||
     "there";
-  const email = decoded.email || userRecord?.email || "";
+  const email = claims.email || "";
   return { name, email };
 }
 
 export default async function AccountPage() {
-  const { name, email } = await getSessionUser();
-  const orders = await getUserOrders(5);
+  const [{ name, email }, orders] = await Promise.all([getSessionUser(), getUserOrders(5)]);
   const latestOrder = orders[0] || null;
   const savedItems = latestOrder?.items?.slice(0, 4) || [];
   const displayName = name && name !== email ? name : "there";
@@ -112,6 +105,7 @@ export default async function AccountPage() {
                             src={item.image || "/placeholder.png"}
                             alt={item.alt || item.name}
                             fill
+                            sizes="128px"
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                           />
                         </div>
@@ -168,6 +162,7 @@ export default async function AccountPage() {
                           src={item.image || "/placeholder.png"}
                           alt={item.alt || item.name}
                           fill
+                          sizes="(max-width: 768px) 50vw, 25vw"
                           className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                       </div>

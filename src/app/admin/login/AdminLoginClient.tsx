@@ -45,7 +45,6 @@ export default function AdminLoginClient() {
         return;
       }
     } catch (error: unknown) {
-      console.error("Login error:", error);
       const code = (error as { code?: string })?.code;
       const message = (error as { message?: string })?.message;
 

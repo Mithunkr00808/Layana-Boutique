@@ -66,7 +66,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const related = await getRelatedProducts();
+  const related = await getRelatedProducts(id, product.categoryPath);
   const primaryMedia = product.images?.[0];
   const primaryImage =
     primaryMedia?.resourceType === "video"

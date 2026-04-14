@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { adminDb } from "@/lib/firebase/admin";
 import { Package, ShoppingBag, Users, TrendingUp, Activity } from 'lucide-react';
 import Link from 'next/link';
+import { AggregateField } from "firebase-admin/firestore";
 
 export const metadata: Metadata = {
   title: 'Dashboard | Layana Boutique Admin',
@@ -18,6 +19,7 @@ type DashboardProduct = {
 
 type RecentOrderRow = {
   id: string;
+  fullId: string;
   name: string;
   amount: string;
   status: string;
@@ -34,40 +36,48 @@ export default async function AdminDashboard() {
   let pendingOrdersCount = 0;
 
   if (process.env.FIREBASE_PROJECT_ID) {
-    const [productsSnap, ordersSnap, usersSnap, recentOrdersSnap] = await Promise.all([
-      adminDb.collection("products").get(),
-      adminDb.collection("orders").get(),
-      adminDb.collection("users").get(),
+    // Sequentially await aggregations to prevent GRPC multiplexer from merging them
+    const ordersCountSnap = await adminDb.collection("orders").count().get();
+    const sumTotalSnap = await adminDb.collection("orders").aggregate({ sumTotal: AggregateField.sum("total") }).get();
+
+    const [
+      usersCountSnap,
+      recentOrdersSnap,
+      activeOrdersCountSnap,
+      productsSafetySnap
+    ] = await Promise.all([
+      adminDb.collection("users").count().get(),
       adminDb.collection("orders").orderBy('createdAt', 'desc').limit(5).get(),
+      adminDb.collection("orders").where("status", "in", ["pending", "processing"]).count().get(),
+      adminDb.collection("products").get() // Full dataset required for accurate stock reporting
     ]);
 
-    productCount = productsSnap.size;
-    orderCount = ordersSnap.size;
-    userCount = usersSnap.size;
+    // Fast O(1) mathematical aggregations without downloading documents
+    orderCount = ordersCountSnap.data().count;
+    totalSales = sumTotalSnap.data().sumTotal || 0;
 
-    // Calculate totals
-    ordersSnap.docs.forEach(doc => {
-      const data = doc.data();
-      totalSales += data.totalAmount || 0;
-      if (data.status === 'pending' || data.status === 'processing') {
-        pendingOrdersCount++;
-      }
-    });
-
-    const allProducts = productsSnap.docs.map((doc) => ({
+    userCount = usersCountSnap.data().count;
+    pendingOrdersCount = activeOrdersCountSnap.data().count;
+    
+    // Evaluate full product snapshot in-memory (safest for small boutique catalogs)
+    const evaluatedProducts = productsSafetySnap.docs.map((doc) => ({
       id: doc.id,
       ...(doc.data() as Omit<DashboardProduct, "id">),
     }));
-    lowStockProducts = allProducts
-      .filter((product) => (product.quantity || product.stock || 0) <= 5)
-      .slice(0, 3);
+    productCount = evaluatedProducts.length;
+    
+    lowStockProducts = evaluatedProducts
+      .filter((product) => (typeof product.quantity === 'number' ? product.quantity : (product.stock || 0)) <= 5)
+      .sort((a, b) => (a.quantity || a.stock || 0) - (b.quantity || b.stock || 0))
+      .slice(0, 4);
     
     recentOrders = recentOrdersSnap.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id.substring(0, 8).toUpperCase(),
-        name: data.shippingAddress?.fullName || data.customerName || 'Guest Customer',
-        amount: `₹${(data.totalAmount || 0).toLocaleString()}`,
+        fullId: doc.id,
+        name: data.address?.fullName || data.shippingAddress?.fullName || data.customerName || 'Guest Customer',
+        amount: `₹${(data.totalAmount || data.total || 0).toLocaleString()}`,
         status: data.status || 'Pending',
         sColor: data.status === 'delivered' ? 'bg-green-100 text-green-700' : 
                 (data.status === 'processing' || data.status === 'shipped') ? 'bg-blue-100 text-blue-700' : 
@@ -124,8 +134,12 @@ export default async function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-[#c3c6d6]/10">
                 {recentOrders.length > 0 ? recentOrders.map((order, i) => (
-                  <tr key={i} className="hover:bg-[#fbf9f8] transition-colors cursor-pointer group">
-                    <td className="px-6 py-4 text-xs font-bold text-[#0051C3] group-hover:underline">#{order.id}</td>
+                  <tr key={i} className="hover:bg-[#fbf9f8] transition-colors group">
+                    <td className="px-6 py-4 text-xs font-bold text-[#0051C3] group-hover:underline">
+                      <Link href={`/admin/orders?id=${order.fullId}`}>
+                        #{order.id}
+                      </Link>
+                    </td>
                     <td className="px-6 py-4 font-medium text-[#1b1c1c] truncate max-w-[150px]">{order.name}</td>
                     <td className="px-6 py-4 font-semibold text-[#1b1c1c]">{order.amount}</td>
                     <td className="px-6 py-4">

@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { fulfillOrder } from "@/lib/orders";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -29,6 +30,32 @@ interface RazorpayOrderPaidPayload {
     };
   };
 }
+
+const razorpayWebhookSchema = z.object({
+  entity: z.string().optional(),
+  account_id: z.string().optional(),
+  event: z.string(),
+  contains: z.array(z.string()).optional(),
+  payload: z.object({
+    payment: z.object({
+      entity: z.object({
+        id: z.string(),
+        order_id: z.string(),
+        status: z.string().optional(),
+        amount: z.number().optional(),
+        currency: z.string().optional(),
+      }),
+    }).optional(),
+    order: z.object({
+      entity: z.object({
+        id: z.string().optional(),
+        status: z.string().optional(),
+        amount: z.number().optional(),
+        receipt: z.string().optional(),
+      }),
+    }).optional(),
+  }),
+});
 
 // ── Signature Verification ──────────────────────────────────────────────────
 
@@ -93,7 +120,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let payload: RazorpayOrderPaidPayload;
 
   try {
-    payload = JSON.parse(rawBody) as RazorpayOrderPaidPayload;
+    const parsed = razorpayWebhookSchema.safeParse(JSON.parse(rawBody));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid payload shape" },
+        { status: 400 }
+      );
+    }
+    payload = parsed.data as RazorpayOrderPaidPayload;
   } catch {
     console.error("Razorpay webhook: failed to parse JSON body");
     return NextResponse.json(

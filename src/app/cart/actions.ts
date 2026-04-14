@@ -1,22 +1,10 @@
 "use server";
 
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
+import { getSessionUid } from "@/lib/auth/session-user";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-
-async function getUidFromSession(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
-  if (!sessionCookie) return null;
-
-  try {
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    return decoded?.uid ?? null;
-  } catch (error) {
-    console.error("Failed to verify session cookie:", error);
-    return null;
-  }
-}
+import { getCartItemsForUser } from "@/lib/data";
 
 export async function getGuestId(): Promise<string> {
   const cookieStore = await cookies();
@@ -38,7 +26,7 @@ export async function updateCartItemQuantity(id: string, newQuantity: number) {
   }
 
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     let docRef;
     if (uid) {
       docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
@@ -65,7 +53,7 @@ export async function getCartItemQuantity(productId: string, size?: string) {
   }
 
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     const guestId = uid ? null : await getGuestId();
 
     const cartCollection = uid
@@ -93,7 +81,7 @@ export async function removeCartItem(id: string) {
   }
 
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     let docRef;
     if (uid) {
       docRef = adminDb.collection("users").doc(uid).collection("cart").doc(id);
@@ -112,6 +100,8 @@ export async function removeCartItem(id: string) {
   }
 }
 
+import { FieldValue } from "firebase-admin/firestore";
+
 export async function addCartItem(input: {
   productId: string;
   name: string;
@@ -121,7 +111,7 @@ export async function addCartItem(input: {
   priceDisplay?: string;
   image?: string;
   alt?: string;
-  quantity?: number; // If provided, sets this exact quantity instead of incrementing
+  quantity?: number; // Sets how much to add (default 1)
   originalPrice?: number;
   originalPriceDisplay?: string;
 }) {
@@ -131,7 +121,7 @@ export async function addCartItem(input: {
   }
 
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     const guestId = uid ? null : await getGuestId();
 
     const cartCollection = uid
@@ -141,14 +131,7 @@ export async function addCartItem(input: {
     const docId = `${input.productId}-${input.size || "onesize"}`;
     const docRef = cartCollection.doc(docId);
 
-    const desiredQty = input.quantity ?? 1;
-
-    if (desiredQty <= 0) {
-      // Remove item from cart
-      await docRef.delete();
-      revalidatePath("/cart");
-      return { ok: true };
-    }
+    const incrementQty = input.quantity && input.quantity > 0 ? input.quantity : 1;
 
     // Single write — no read needed
     await docRef.set(
@@ -158,13 +141,13 @@ export async function addCartItem(input: {
         name: input.name,
         variant: input.variant || "",
         size: input.size || "",
-        quantity: desiredQty,
+        quantity: FieldValue.increment(incrementQty),
         price: input.priceDisplay || `₹${input.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
         rawPrice: input.price,
         image: input.image || "",
         alt: input.alt || input.name,
-        originalPrice: input.originalPriceDisplay,
-        rawOriginalPrice: input.originalPrice,
+        originalPrice: input.originalPriceDisplay || null,
+        rawOriginalPrice: input.originalPrice || null,
       },
       { merge: true }
     );
@@ -184,7 +167,7 @@ export async function clearUserCart(uid?: string) {
   }
 
   try {
-    const sessionUid = await getUidFromSession();
+    const sessionUid = await getSessionUid();
     if (!sessionUid) return false;
     if (uid && uid !== sessionUid) return false;
 
@@ -209,6 +192,5 @@ export async function clearUserCart(uid?: string) {
 }
 
 export async function fetchCartItems() {
-  const { getCartItemsForUser } = await import("@/lib/data");
   return await getCartItemsForUser();
 }

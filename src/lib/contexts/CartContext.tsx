@@ -53,7 +53,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     
     const newItems = [...items];
     if (existingIndex > -1) {
-      newItems[existingIndex].quantity += (input.quantity || 1);
+      newItems[existingIndex] = {
+        ...newItems[existingIndex],
+        quantity: newItems[existingIndex].quantity + (input.quantity || 1)
+      };
     } else {
       newItems.push({
         id: docId,

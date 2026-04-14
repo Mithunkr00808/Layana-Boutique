@@ -24,15 +24,15 @@ export default async function AdminCustomersPage() {
   let customerOrders: Record<string, CustomerOrder[]> = {};
 
   if (process.env.FIREBASE_PROJECT_ID) {
-    // Fetch all customers (removed hardcoded limit)
-    const snapshot = await adminDb.collection("users").get();
+    // Fetch subset of customers to prevent payload freezing
+    const snapshot = await adminDb.collection("users").limit(100).get();
     customers = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...(doc.data() as Omit<CustomerRecord, "id">),
     }));
 
-    // Fetch all orders and group by userId for order history
-    const ordersSnap = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
+    // Fetch subset of orders and group by userId for order history
+    const ordersSnap = await adminDb.collection("orders").orderBy("createdAt", "desc").limit(100).get();
     ordersSnap.docs.forEach((doc) => {
       const data = doc.data();
       const userId = data.userId;

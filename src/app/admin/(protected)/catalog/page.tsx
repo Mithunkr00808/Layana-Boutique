@@ -18,7 +18,7 @@ export default async function CatalogPage() {
   let products: CatalogProduct[] = [];
 
   if (process.env.FIREBASE_PROJECT_ID) {
-    const snapshot = await adminDb.collection("products").get();
+    const snapshot = await adminDb.collection("products").orderBy("createdAt", "desc").limit(100).get();
     // JSON round-trip strips non-serializable Firestore Timestamp objects
     products = JSON.parse(
       JSON.stringify(

@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   experimental: {
+    optimizePackageImports: ["lucide-react"],
     serverActions: {
-      bodySizeLimit: "500mb",
+      bodySizeLimit: "10mb",
     },
   },
   images: {

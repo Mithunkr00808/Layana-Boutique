@@ -2,8 +2,8 @@
 import Navbar from "@/components/Navbar";
 import AccountSidebar from "@/components/AccountSidebar";
 import { getUserOrders } from "@/lib/data";
-import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebase/admin";
+import { getSessionClaims } from "@/lib/auth/session-user";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -35,21 +35,15 @@ function formatDate(value: any) {
 }
 
 async function getSessionUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
-  if (!sessionCookie) {
+  const claims = await getSessionClaims();
+  if (!claims) {
     return { name: "there", email: "" };
   }
-  const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-  const uid = decoded.uid;
-  const userRecord = await adminAuth.getUser(uid).catch(() => null);
   const name =
-    userRecord?.displayName ||
-    decoded.name ||
-    decoded.email?.split("@")[0] ||
-    userRecord?.email?.split("@")[0] ||
+    claims.name ||
+    claims.email?.split("@")[0] ||
     "there";
-  const email = decoded.email || userRecord?.email || "";
+  const email = claims.email || "";
   return { name, email };
 }
 
@@ -157,6 +151,7 @@ export default async function OrdersPage() {
                               src={item.image || "/placeholder.png"}
                               alt={item.alt || item.name}
                               fill
+                              sizes="112px"
                               className="object-cover"
                             />
                           </div>

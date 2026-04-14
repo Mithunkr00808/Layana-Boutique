@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import { adminDb } from "@/lib/firebase/admin";
-import type { CartItem, Address } from "@/lib/data";
+import type { CartItem } from "@/lib/data";
+import { getUserAddressById } from "@/lib/addresses";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -21,40 +22,15 @@ export type FulfillResult =
   | { success: true; orderId: string; alreadyFulfilled: boolean }
   | { success: false; error: string };
 
-// ── Address Resolver ────────────────────────────────────────────────────────
+interface FulfillmentLockData {
+  orderId?: string;
+  status?: "fulfilled";
+}
 
-async function resolveAddress(uid: string, addressId: string): Promise<Address | null> {
-  // Try subcollection first
-  const addressDoc = await adminDb
-    .collection("users")
-    .doc(uid)
-    .collection("addresses")
-    .doc(addressId)
-    .get()
-    .catch(() => null);
-
-  if (addressDoc && addressDoc.exists) {
-    const data = addressDoc.data() as Partial<Address>;
-    return {
-      id: data.id ?? addressDoc.id,
-      fullName: data.fullName ?? "",
-      phone: data.phone ?? "",
-      streetAddress: data.streetAddress ?? "",
-      city: data.city ?? "",
-      state: data.state ?? "",
-      postalCode: data.postalCode ?? "",
-    };
-  }
-
-  // Fallback to addresses array on user doc
-  const userDoc = await adminDb.collection("users").doc(uid).get();
-  const userData = userDoc.data();
-  if (userData && Array.isArray(userData.addresses)) {
-    const match = (userData.addresses as Address[]).find((addr) => addr.id === addressId);
-    if (match) return match;
-  }
-
-  return null;
+function isAlreadyExistsError(error: unknown): boolean {
+  const code = (error as { code?: string | number })?.code;
+  const message = String((error as { message?: string })?.message || "").toLowerCase();
+  return code === "already-exists" || code === 6 || message.includes("already exists");
 }
 
 // ── Core Fulfillment ────────────────────────────────────────────────────────
@@ -76,6 +52,9 @@ export async function fulfillOrder(
   razorpayPaymentId: string,
   razorpaySignature?: string
 ): Promise<FulfillResult> {
+  const fulfillmentRef = adminDb.collection("orderFulfillments").doc(razorpayOrderId);
+  const pendingRef = adminDb.collection("pendingOrders").doc(razorpayOrderId);
+
   // ── Idempotency Guard ─────────────────────────────────────────────────
   // If this order was already fulfilled (e.g. webhook fired after client
   // already completed), return success immediately without touching the DB.
@@ -94,10 +73,19 @@ export async function fulfillOrder(
   }
 
   // ── Load Pending Order ────────────────────────────────────────────────
-  const pendingRef = adminDb.collection("pendingOrders").doc(razorpayOrderId);
   const pendingDoc = await pendingRef.get();
 
   if (!pendingDoc.exists) {
+    const fulfillmentDoc = await fulfillmentRef.get().catch(() => null);
+    const fulfillmentData = fulfillmentDoc?.data() as FulfillmentLockData | undefined;
+    if (fulfillmentData?.orderId) {
+      return {
+        success: true,
+        orderId: fulfillmentData.orderId,
+        alreadyFulfilled: true,
+      };
+    }
+
     // Edge case: pending doc already cleaned up but order wasn't found above.
     // This can happen if Firestore eventually-consistent reads lag slightly.
     // Re-check orders one more time before failing.
@@ -121,7 +109,7 @@ export async function fulfillOrder(
   const pending = pendingDoc.data() as PendingOrderData;
 
   // ── Resolve Address ───────────────────────────────────────────────────
-  const address = await resolveAddress(pending.uid, pending.addressId);
+  const address = await getUserAddressById(pending.uid, pending.addressId);
 
   // ── Recalculate Totals ────────────────────────────────────────────────
   const subtotal = pending.items.reduce(
@@ -152,10 +140,19 @@ export async function fulfillOrder(
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     address,
   });
+  batch.create(fulfillmentRef, {
+    razorpayOrderId,
+    orderId: orderRef.id,
+    status: "fulfilled",
+    paymentId: razorpayPaymentId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
 
   // 2. Deduct inventory from `products` and `productDetails` (if docs exist)
   for (const item of pending.items) {
-    const productRef = adminDb.collection("products").doc(item.id);
+    const targetProductId = item.productId || item.id.replace(/-[^-]+$/, "");
+    const productRef = adminDb.collection("products").doc(targetProductId);
     const productDoc = await productRef.get();
     if (productDoc.exists) {
       batch.update(productRef, {
@@ -163,7 +160,7 @@ export async function fulfillOrder(
       });
     }
 
-    const detailRef = adminDb.collection("productDetails").doc(item.id);
+    const detailRef = adminDb.collection("productDetails").doc(targetProductId);
     const detailDoc = await detailRef.get();
     if (detailDoc.exists) {
       batch.update(detailRef, {
@@ -176,7 +173,36 @@ export async function fulfillOrder(
   batch.delete(pendingRef);
 
   // Commit all writes atomically
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (error) {
+    if (isAlreadyExistsError(error)) {
+      const fulfillmentDoc = await fulfillmentRef.get().catch(() => null);
+      const fulfillmentData = fulfillmentDoc?.data() as FulfillmentLockData | undefined;
+      if (fulfillmentData?.orderId) {
+        return {
+          success: true,
+          orderId: fulfillmentData.orderId,
+          alreadyFulfilled: true,
+        };
+      }
+
+      const retrySnapshot = await adminDb
+        .collection("orders")
+        .where("razorpayOrderId", "==", razorpayOrderId)
+        .limit(1)
+        .get();
+      if (!retrySnapshot.empty) {
+        return {
+          success: true,
+          orderId: retrySnapshot.docs[0].id,
+          alreadyFulfilled: true,
+        };
+      }
+    }
+
+    throw error;
+  }
 
   // ── Cart Cleanup (non-critical) ───────────────────────────────────────
   // Done outside the batch because cart cleanup failure should not

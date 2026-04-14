@@ -151,8 +151,12 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
 
   const maybeAutoFillCityState = async (pin: string) => {
     if (pin.length !== 6 || newAddress.city || newAddress.state) return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`, {
+        signal: controller.signal,
+      });
       const data = (await res.json()) as any[];
       const office = data?.[0]?.PostOffice?.[0];
       if (office) {
@@ -163,7 +167,11 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
         }));
       }
     } catch (err) {
-      console.warn("PIN lookup failed", err);
+      if ((err as Error)?.name !== "AbortError") {
+        console.warn("PIN lookup failed", err);
+      }
+    } finally {
+      clearTimeout(timeout);
     }
   };
 

@@ -8,8 +8,10 @@ import { getNewArrivals, getJournalArticles } from "@/lib/data";
 import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/jsonld";
 
 export default async function Home() {
-  const newArrivals = await getNewArrivals();
-  const articles = await getJournalArticles();
+  const [newArrivals, articles] = await Promise.all([
+    getNewArrivals(),
+    getJournalArticles()
+  ]);
 
   return (
     <div className="flex flex-col min-h-screen">

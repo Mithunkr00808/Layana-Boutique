@@ -16,6 +16,7 @@ export const productSchema = z.object({
   }),
   sustainability: z.string().max(300).optional(),
   sizes: z.string().optional(),
+  subCategories: z.string().optional(),
   options: z.string().max(200).optional(),
   enableSizes: z.string().optional(),
 });

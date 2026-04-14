@@ -22,6 +22,7 @@ interface ProductDetailsProps {
   discountPrice?: string;
   quantity: number;
   hasSizes?: boolean;
+  materials?: string;
   sustainability: string;
   sizes: SizeProps[];
   primaryImage?: string;
@@ -156,6 +157,18 @@ export default function ProductDetails(props: ProductDetailsProps) {
           </p>
 
           <div className="flex flex-col gap-3">
+            {props.materials && (
+              <details className="group">
+                <summary className="flex items-center justify-between cursor-pointer list-none py-4 border-b border-[var(--color-outline-variant)]/30">
+                  <span className="font-sans text-xs uppercase tracking-widest">Material & Care</span>
+                  <ChevronDown strokeWidth={1} size={16} className="group-open:rotate-180 transition-transform" />
+                </summary>
+                <div className="py-4 text-sm text-[var(--color-on-surface-variant)] font-light">
+                  <p>{props.materials}</p>
+                </div>
+              </details>
+            )}
+
             <details className="group">
               <summary className="flex items-center justify-between cursor-pointer list-none py-4 border-b border-[var(--color-outline-variant)]/30">
                 <span className="font-sans text-xs uppercase tracking-widest">Sustainability</span>

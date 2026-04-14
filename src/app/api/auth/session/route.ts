@@ -1,9 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from "zod";
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { csrfRejectedResponse, isSameOriginRequest } from "@/lib/security/csrf";
+
+const sessionRequestSchema = z
+  .object({
+    idToken: z.string().min(1, "Missing ID token"),
+    profile: z
+      .object({
+        firstName: z.string().trim().max(100).optional(),
+        lastName: z.string().trim().max(100).optional(),
+        email: z.string().trim().max(320).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
 
 export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return csrfRejectedResponse();
+  }
+
   try {
-    const { idToken, profile } = await request.json();
+    const body = await request.json();
+    const parsed = sessionRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request payload" }, { status: 400 });
+    }
+
+    const { idToken, profile } = parsed.data;
 
     if (!idToken) {
       return NextResponse.json({ error: 'Missing ID Token' }, { status: 400 });

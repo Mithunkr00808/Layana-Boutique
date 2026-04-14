@@ -2,8 +2,9 @@
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 import { unstable_cache } from 'next/cache';
 import { cookies } from 'next/headers';
-import { adminAuth, adminDb } from './firebase/admin';
+import { adminDb } from './firebase/admin';
 import { buildCloudinaryVideoPosterUrl } from './cloudinary';
+import { getSessionUid } from './auth/session-user';
 import {
   DEFAULT_PRODUCT_CATEGORY,
   isKnownProductCategory,
@@ -22,6 +23,7 @@ export interface Product {
   image: string;
   alt: string;
   isLimited?: boolean;
+  subCategories?: string[];
   options?: string;
 }
 
@@ -49,7 +51,8 @@ export interface ProductDetail {
   quantity: number;
   hasSizes?: boolean;
   description: string;
-  materials: string[];
+  subCategories?: string[];
+  materials: string;
   sustainability: string;
   images: ProductMedia[];
   sizes: ProductSize[];
@@ -57,6 +60,7 @@ export interface ProductDetail {
 
 export interface CartItem {
   id: string;
+  productId?: string;
   name: string;
   variant: string;
   size: string;
@@ -172,9 +176,10 @@ function mapProductDoc(doc: DocumentSnapshot): Product {
     discountPrice: data?.discountPrice ? formatIndianPrice(data.discountPrice) : undefined,
     quantity: data?.quantity || 0,
     image: data?.image || '',
-    alt: data?.alt || '',
-    isLimited: data?.isLimited || false,
+    alt: data?.alt || `${data?.name || 'Product'} cover image`,
+    isLimited: data?.isLimited ?? false,
     options: data?.options || '',
+    subCategories: Array.isArray(data?.subCategories) ? data.subCategories : [],
   };
 }
 
@@ -187,7 +192,11 @@ export const getNewArrivals = unstable_cache(
     }
 
     try {
-      const snapshot = await adminDb.collection('products').get();
+      // Fetch reasonable limit of newest products natively
+      const snapshot = await adminDb.collection('products')
+        .orderBy('createdAt', 'desc')
+        .limit(15)
+        .get();
 
       if (snapshot.empty) return [];
 
@@ -219,15 +228,17 @@ export async function getReadyToWearProducts(filters?: { category?: string | nul
       }
 
       try {
-        const snapshot = await adminDb.collection('products').get();
+        let query: FirebaseFirestore.Query = adminDb.collection('products');
+
+        if (filters?.category && isKnownProductCategory(filters.category)) {
+          query = query.where("category", "==", filters.category);
+        }
+
+        const snapshot = await query.get();
 
         if (snapshot.empty) return [];
 
         let products = snapshot.docs.map(mapProductDoc);
-
-        if (filters?.category && isKnownProductCategory(filters.category)) {
-          products = products.filter((product) => product.category === filters.category);
-        }
 
         if (filters?.size) {
           const sizeLower = filters.size.toLowerCase();
@@ -293,7 +304,8 @@ export async function getProductDetail(id: string): Promise<ProductDetail | null
         discountPrice: raw.discountPrice ? formatIndianPrice(raw.discountPrice) : undefined,
         quantity: raw.quantity || 0,
         description: raw.description || '',
-        materials: raw.materials || [],
+        subCategories: Array.isArray(raw.subCategories) ? raw.subCategories : [],
+        materials: raw.materials || '',
         sustainability: raw.sustainability || '',
         images: normalizeProductMediaArray(raw.images),
         sizes: raw.sizes || [],
@@ -345,16 +357,29 @@ export async function getProductDetail(id: string): Promise<ProductDetail | null
   }
 }
 
-export async function getRelatedProducts(): Promise<Product[]> {
+export async function getRelatedProducts(currentId?: string, category?: string): Promise<Product[]> {
   if (!process.env.FIREBASE_PROJECT_ID) {
     return [];
   }
 
   try {
-    const snapshot = await adminDb.collection('products').limit(4).get();
-    if (snapshot.empty) return [];
+    let query: FirebaseFirestore.Query = adminDb.collection('products');
+    
+    if (category) {
+      query = query.where('category', '==', category);
+    }
+    
+    const snapshot = await query.limit(10).get();
+    
+    let products = snapshot.docs.map(mapProductDoc).filter(p => p.id !== currentId);
+    
+    if (category && products.length < 4) {
+      const fallbackSnap = await adminDb.collection('products').limit(10).get();
+      const fallbacks = fallbackSnap.docs.map(mapProductDoc).filter(p => p.id !== currentId && p.category !== category);
+      products = [...products, ...fallbacks];
+    }
 
-    return snapshot.docs.map(mapProductDoc);
+    return products.slice(0, 4);
   } catch (error) {
     console.error('Failed to fetch related products:', error);
     return [];
@@ -366,6 +391,7 @@ function mapCartDoc(doc: DocumentSnapshot): CartItem {
 
   return {
     id: data?.id ?? doc.id,
+    productId: data?.productId ?? '',
     name: data?.name ?? 'Unknown Item',
     variant: data?.variant ?? '',
     size: data?.size ?? '',
@@ -426,54 +452,17 @@ export async function getCartItemsForUser(): Promise<CartItem[]> {
   }
 
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session')?.value;
-    const guestId = cookieStore.get('guestId')?.value;
-
-    async function mergeGuestToUser(uid: string, guest: string) {
-      const guestSnap = await adminDb
-        .collection('guest-carts')
-        .doc(guest)
-        .collection('items')
-        .get();
-
-      if (guestSnap.empty) return;
-
-      await adminDb.runTransaction(async (txn) => {
-        for (const doc of guestSnap.docs) {
-          const data = doc.data() as any;
-          const targetRef = adminDb.collection('users').doc(uid).collection('cart').doc(doc.id);
-          const existing = await txn.get(targetRef);
-          const existingQty = (existing.exists ? (existing.data()?.quantity as number | undefined) : 0) ?? 0;
-          txn.set(
-            targetRef,
-            {
-              ...data,
-              quantity: Math.max(1, existingQty + ((data.quantity as number) ?? 1)),
-            },
-            { merge: true }
-          );
-        }
-      });
-
-      const batch = adminDb.batch();
-      guestSnap.docs.forEach((d) => batch.delete(d.ref));
-      batch.delete(adminDb.collection('guest-carts').doc(guest));
-      await batch.commit();
-    }
-
-    if (sessionCookie) {
-      const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-      const uid = decoded?.uid;
-      if (uid) {
-        if (guestId) {
-          await mergeGuestToUser(uid, guestId);
-        }
-        return await getCartItems(uid);
-      }
+    const uid = await getSessionUid();
+    if (uid) {
+      // Cart merge is handled exclusively by /api/cart/migrate
+      // (called once on login from AuthContext). No merge logic here
+      // to prevent race conditions and duplicate quantity increments.
+      return await getCartItems(uid);
     }
 
     // Fallback to guest cart
+    const cookieStore = await cookies();
+    const guestId = cookieStore.get('guestId')?.value;
     if (!guestId) return [];
 
     const snapshot = await adminDb
@@ -497,12 +486,7 @@ export async function getUserAddresses(): Promise<Address[]> {
   }
 
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session')?.value;
-    if (!sessionCookie) return [];
-
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const uid = decoded?.uid;
+    const uid = await getSessionUid();
     if (!uid) return [];
 
     const userRef = adminDb.collection('users').doc(uid);
@@ -552,72 +536,19 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
   }
 
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session')?.value;
-    if (!sessionCookie) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const uid = decoded?.uid;
+    const uid = await getSessionUid();
     if (!uid) return null;
 
     const docRef = adminDb.collection('orders').doc(orderId);
     const doc = await docRef.get();
     if (!doc.exists) return null;
 
+    // Ownership check: only return the order if it belongs to this user
     const data = doc.data() as any;
     if (data.userId !== uid) return null;
 
-    const items: CartItem[] = Array.isArray(data.items)
-      ? data.items.map((item: any) => ({
-          id: item.id ?? '',
-          name: item.name ?? '',
-          variant: item.variant ?? '',
-          size: item.size ?? '',
-          quantity: item.quantity ?? 1,
-          price: item.price ?? '',
-          rawPrice: item.rawPrice ?? 0,
-          image: item.image ?? '',
-          alt: item.alt ?? '',
-        }))
-      : [];
-
-    const subtotalStored = typeof data.subtotal === 'number' ? data.subtotal : null;
-    const subtotal = subtotalStored ?? items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
-    const shippingStored = typeof data.shipping === 'number' ? data.shipping : null;
-    const shipping = shippingStored ?? 0;
-    const totalStored = typeof data.total === 'number' ? data.total : null;
-    const total =
-      totalStored ??
-      (typeof data.amount === 'number' ? Number(data.amount) / 100 : subtotal + shipping);
-
-    const address: Address | null = data.address
-      ? {
-          id: data.address.id ?? 'address',
-          fullName: data.address.fullName ?? '',
-          phone: data.address.phone ?? '',
-          streetAddress: data.address.streetAddress ?? '',
-          city: data.address.city ?? '',
-          state: data.address.state ?? '',
-          postalCode: data.address.postalCode ?? '',
-        }
-      : null;
-
-    return {
-      id: doc.id,
-      userId: data.userId,
-      razorpayOrderId: data.razorpayOrderId,
-      razorpayPaymentId: data.razorpayPaymentId,
-      razorpaySignature: data.razorpaySignature,
-      receipt: data.receipt,
-      items,
-      subtotal,
-      shipping,
-      total,
-      currency: data.currency ?? 'INR',
-      status: data.status ?? 'paid',
-      address,
-      createdAt: data.createdAt,
-    };
+    // Delegate to shared mapOrder() to avoid duplicate mapping logic
+    return mapOrder(doc);
   } catch (error) {
     console.error('Failed to fetch order:', error);
     return null;
@@ -683,12 +614,7 @@ export async function getUserOrders(limit = 20): Promise<Order[]> {
   if (!process.env.FIREBASE_PROJECT_ID) return [];
 
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session')?.value;
-    if (!sessionCookie) return [];
-
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const uid = decoded?.uid;
+    const uid = await getSessionUid();
     if (!uid) return [];
 
     const snapshot = await adminDb
@@ -724,39 +650,7 @@ export async function getAllOrders(limit = 100): Promise<Order[]> {
   }
 }
 
-// ---- Site Settings ----
-
-export interface SiteSettings {
-  hero: { imageUrl: string; alt: string };
-  social: { instagram: string; facebook: string; email: string };
-}
-
-const DEFAULT_HERO_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuD315us5QSxHnxztOXDZ8ttyjNhERsYzKjADSyBq75CASgaps_JA9zS0rdzP_dPN1bpscfJuYkI3j3-GPLU0DTyLml8mA6SPnaLUTELp3VwKIsPkI9rkDnzEPfutX5NILavsl41IXPCWWfAEgXAyOrpa75BQ0bisSsEQXH3U1vYhVjqgIHzOvZsDbN-dNmHJH8Z8qao4by3NB8hnCQnId8zey-8t0h7eOCxSG3IFcFUOPARCycg_FziDBev2QjpChOfUFlEvs9SbIa_';
-
-const DEFAULT_SITE_SETTINGS: SiteSettings = {
-  hero: { imageUrl: DEFAULT_HERO_URL, alt: 'Layana Boutique — curating conscious luxury' },
-  social: { instagram: '', facebook: '', email: '' },
-};
-
-export const getSiteSettings = unstable_cache(
-  async (): Promise<SiteSettings> => {
-    if (!process.env.FIREBASE_PROJECT_ID) return DEFAULT_SITE_SETTINGS;
-    try {
-      const [heroDoc, socialDoc] = await Promise.all([
-        adminDb.collection('siteSettings').doc('hero').get(),
-        adminDb.collection('siteSettings').doc('social').get(),
-      ]);
-      const h = heroDoc.exists ? (heroDoc.data() as SiteSettings['hero']) : DEFAULT_SITE_SETTINGS.hero;
-      const s = socialDoc.exists ? (socialDoc.data() as SiteSettings['social']) : DEFAULT_SITE_SETTINGS.social;
-      return {
-        hero: { imageUrl: h.imageUrl || DEFAULT_HERO_URL, alt: h.alt || DEFAULT_SITE_SETTINGS.hero.alt },
-        social: { instagram: s.instagram || '', facebook: s.facebook || '', email: s.email || '' },
-      };
-    } catch (err) {
-      console.error('getSiteSettings error:', err);
-      return DEFAULT_SITE_SETTINGS;
-    }
-  },
-  ['site-settings'],
-  { tags: ['settings'] }
-);
+// Site Settings are managed exclusively by @/lib/siteSettings.
+// The duplicate SiteSettings type and getSiteSettings function that existed
+// here have been removed to eliminate type confusion. Import from
+// '@/lib/siteSettings' for all site settings needs.

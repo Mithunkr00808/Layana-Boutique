@@ -38,14 +38,14 @@ export default function NewArrivals({ products }: { products: ProductSummary[] }
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-        {products.map((product) => (
+        {products.map((product, index) => (
           <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer block">
             <div className="rounded-[20px] aspect-[3/4] overflow-hidden bg-[var(--color-surface-low)] mb-6 relative">
               <Image
                 src={product.image}
                 alt={product.alt}
                 fill
-                priority={true}
+                priority={index === 0}
                 className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                 sizes="(max-width: 768px) 100vw, 33vw"
               />

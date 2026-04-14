@@ -3,7 +3,12 @@ import OrdersClient from "./_components/OrdersClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminOrdersPage() {
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
   const orders = await getAllOrders();
 
   // Serialize Firestore timestamps to ISO strings for the client
@@ -20,5 +25,5 @@ export default async function AdminOrdersPage() {
       : null,
   }));
 
-  return <OrdersClient orders={serializedOrders} />;
+  return <OrdersClient orders={serializedOrders} expandId={params.id as string} />;
 }

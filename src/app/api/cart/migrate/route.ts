@@ -1,8 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { csrfRejectedResponse, isSameOriginRequest } from "@/lib/security/csrf";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return csrfRejectedResponse();
+  }
+
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session")?.value;
   const guestId = cookieStore.get("guestId")?.value;

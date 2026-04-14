@@ -24,8 +24,32 @@ import type { ProductMedia } from "@/types/product-media";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
+const PRESET_SUB_CATEGORIES: Record<string, string[]> = {
+  sarees: ["Bridal", "Party Wear", "Festive", "Casual"],
+  kurties: ["Workwear", "Casual", "Lounge", "Festive"],
+  "kids-wear": ["Festive", "Casual"],
+  lehengas: ["Bridal", "Party Wear", "Festive"],
+  gowns: ["Evening Wear", "Bridal", "Party Wear"],
+  unstitched: ["Casual", "Festive", "Workwear"],
+};
+const DEFAULT_PRESET_SUB = ["Casual", "Festive", "Party Wear"];
 const PRESET_SIZES = ["XS", "S", "M", "L", "XL"];
 const MAX_MEDIA_ITEMS = 8;
+
+const SIZE_ORDER: Record<string, number> = {
+  "XXXS": 5, "XXS": 10, "XS": 20, "S": 30, "M": 40, "L": 50, 
+  "XL": 60, "XXL": 70, "2XL": 70, "3XL": 80, "4XL": 90, "5XL": 100, "6XL": 110,
+};
+
+function sortSizes(a: string, b: string) {
+  if (SIZE_ORDER[a] && SIZE_ORDER[b]) return SIZE_ORDER[a] - SIZE_ORDER[b];
+  if (SIZE_ORDER[a]) return -1;
+  if (SIZE_ORDER[b]) return 1;
+  const numA = parseInt(a);
+  const numB = parseInt(b);
+  if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+  return a.localeCompare(b);
+}
 
 type ProductSize = {
   label: string;
@@ -107,7 +131,13 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
     if (initialData?.sizes) {
       return initialData.sizes.map((size) => size.label).join(", ");
     }
-    return "S, M, L";
+    return "";
+  });
+  const [subCategoriesValue, setSubCategoriesValue] = useState(() => {
+    if (initialData?.subCategories?.length) {
+      return initialData.subCategories.join(", ");
+    }
+    return "";
   });
   const [optionsValue, setOptionsValue] = useState(initialData?.options || "");
   const [enableSizes, setEnableSizes] = useState(initialData?.hasSizes ?? true);
@@ -116,10 +146,53 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
   const [eagerUploadResults, setEagerUploadResults] = useState<Record<string, ProductMedia>>({});
   const eagerUploadResultsRef = useRef<Record<string, ProductMedia>>({});
 
+  const [selectedCategory, setSelectedCategory] = useState(
+    initialData?.categoryPath || initialData?.category || PRODUCT_CATEGORY_OPTIONS[0]?.value || "sarees"
+  );
+  
+  const [persistentCustomSizes, setPersistentCustomSizes] = useState<string[]>(PRESET_SIZES);
+  const [persistentCustomSub, setPersistentCustomSub] = useState<Record<string, string[]>>(PRESET_SUB_CATEGORIES);
+
+  useEffect(() => {
+    try {
+      const storedSizes = localStorage.getItem("layana_custom_sizes");
+      if (storedSizes) setPersistentCustomSizes(JSON.parse(storedSizes));
+      
+      const storedSub = localStorage.getItem("layana_custom_subcategories");
+      if (storedSub) {
+        const parsed = JSON.parse(storedSub);
+        if (Array.isArray(parsed)) {
+          setPersistentCustomSub({ ...PRESET_SUB_CATEGORIES, sarees: parsed });
+        } else {
+          setPersistentCustomSub({ ...PRESET_SUB_CATEGORIES, ...parsed });
+        }
+      }
+    } catch (e) {
+      console.warn("Could not read custom admin presets", e);
+    }
+  }, []);
+
+  const addPersistentSize = (customSize: string) => {
+    setPersistentCustomSizes(prev => {
+      if (prev.includes(customSize)) return prev;
+      const next = [...prev, customSize];
+      localStorage.setItem("layana_custom_sizes", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const addPersistentSubCategory = (customSub: string) => {
+    setPersistentCustomSub((prev) => {
+      const categoryList = prev[selectedCategory] || DEFAULT_PRESET_SUB;
+      if (categoryList.includes(customSub)) return prev;
+      const nextCategoryList = [...categoryList, customSub];
+      const next = { ...prev, [selectedCategory]: nextCategoryList };
+      localStorage.setItem("layana_custom_subcategories", JSON.stringify(next));
+      return next;
+    });
+  };
+
   const isEditing = !!initialData?.id;
-  const selectedCategory = isKnownProductCategory(initialData?.categoryPath || initialData?.category)
-    ? initialData?.categoryPath || initialData?.category
-    : DEFAULT_PRODUCT_CATEGORY;
 
   useEffect(() => {
     mediaItemsRef.current = mediaItems;
@@ -156,6 +229,54 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
     }
 
     setSizesValue(Array.from(next).join(", "));
+  }
+
+  function removePersistentSize(size: string) {
+    setPersistentCustomSizes((prev) => {
+      const next = prev.filter((s) => s !== size);
+      localStorage.setItem("layana_custom_sizes", JSON.stringify(next));
+      return next;
+    });
+
+    const nextActive = new Set(activeSizes);
+    if (nextActive.has(size)) {
+      nextActive.delete(size);
+      setSizesValue(Array.from(nextActive).join(", "));
+    }
+  }
+
+  const activeSubCategories = useMemo(
+    () =>
+      new Set(
+        subCategoriesValue
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      ),
+    [subCategoriesValue]
+  );
+
+  function toggleSubCategory(sub: string) {
+    const next = new Set(activeSubCategories);
+    if (next.has(sub)) next.delete(sub);
+    else next.add(sub);
+    setSubCategoriesValue(Array.from(next).join(", "));
+  }
+
+  function removePersistentSubCategory(sub: string) {
+    setPersistentCustomSub((prev) => {
+      const categoryList = prev[selectedCategory] || DEFAULT_PRESET_SUB;
+      const nextCategoryList = categoryList.filter((s) => s !== sub);
+      const next = { ...prev, [selectedCategory]: nextCategoryList };
+      localStorage.setItem("layana_custom_subcategories", JSON.stringify(next));
+      return next;
+    });
+
+    const nextActive = new Set(activeSubCategories);
+    if (nextActive.has(sub)) {
+      nextActive.delete(sub);
+      setSubCategoriesValue(Array.from(nextActive).join(", "));
+    }
   }
 
   function updateMediaOrder(nextItems: FormMediaItem[]) {
@@ -365,6 +486,7 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
       formData.set("category", (form.elements.namedItem("category") as HTMLSelectElement).value);
       formData.set("sustainability", (form.elements.namedItem("sustainability") as HTMLInputElement).value);
       formData.set("options", optionsValue);
+      formData.set("subCategories", subCategoriesValue);
       formData.set("sizes", sizesValue);
       formData.set("enableSizes", enableSizes ? "on" : "off");
 
@@ -503,25 +625,49 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
               {enableSizes && (
                 <div>
                   <div className="mb-5 flex flex-wrap gap-3">
-                    {PRESET_SIZES.map((size) => {
+                    {Array.from(new Set([...persistentCustomSizes, ...Array.from(activeSizes)]))
+                      .sort(sortSizes)
+                      .map((size) => {
                       const isActive = activeSizes.has(size);
+                      
                       return (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => toggleSize(size)}
-                          className={`px-6 py-2 text-xs font-bold transition-all duration-300 ${
-                            isActive
-                              ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                              : "border border-[var(--color-outline-variant)]/20 bg-[var(--color-surface-container-lowest)] hover:border-[var(--color-primary)]"
-                          }`}
-                        >
-                          {size}
-                        </button>
+                        <div key={size} className="group relative flex">
+                          <button
+                            type="button"
+                            onClick={() => toggleSize(size)}
+                            className={`px-6 py-2 text-xs font-bold transition-all duration-300 pr-8 ${
+                              isActive
+                                ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                                : "border border-[var(--color-outline-variant)]/20 bg-[var(--color-surface-container-lowest)] hover:border-[var(--color-primary)] text-[var(--color-on-surface)]"
+                            }`}
+                          >
+                            {size}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removePersistentSize(size);
+                            }}
+                            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 transition-all ${
+                              isActive ? "text-white/60 hover:text-white" : "text-[var(--color-on-surface-variant)]/40 hover:text-[var(--color-error)] opacity-0 group-hover:opacity-100"
+                            }`}
+                          >
+                            <X size={12} strokeWidth={3} />
+                          </button>
+                        </div>
                       );
                     })}
                     <button
                       type="button"
+                      onClick={() => {
+                        const custom = window.prompt("Enter Custom Size (e.g., XL, 42, Custom Fit):");
+                        if (custom && custom.trim()) {
+                          const normalized = custom.trim().toUpperCase();
+                          toggleSize(normalized);
+                          addPersistentSize(normalized);
+                        }
+                      }}
                       className="flex items-center gap-2 border border-dashed border-[var(--color-outline-variant)]/40 px-6 py-2 text-xs font-bold text-[var(--color-on-surface-variant)] transition-all duration-300 hover:bg-[var(--color-surface-container-high)]"
                     >
                       <Plus className="size-3.5" />
@@ -542,7 +688,7 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
 
             <div>
               <label className="mb-6 block text-[0.65rem] font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
-                Product Options
+                Product Material
               </label>
               <input
                 type="text"
@@ -788,7 +934,11 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
               </label>
               <select
                 name="category"
-                defaultValue={selectedCategory}
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setSubCategoriesValue("");
+                }}
                 className="w-full cursor-pointer border-0 border-b border-[var(--color-outline-variant)]/20 bg-transparent py-3 text-sm font-medium focus:border-[var(--color-primary)] focus:outline-none"
               >
                 {PRODUCT_CATEGORY_OPTIONS.map((category) => (
@@ -797,6 +947,73 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="mb-6 block text-[0.65rem] font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
+                Collection Sub Categories
+              </label>
+              <div>
+                <div className="mb-5 flex flex-wrap gap-3">
+                  {Array.from(new Set([
+                    ...(persistentCustomSub[selectedCategory] || DEFAULT_PRESET_SUB), 
+                    ...Array.from(activeSubCategories)
+                  ])).map((sub) => {
+                    const isActive = activeSubCategories.has(sub);
+                    
+                    return (
+                      <div key={sub} className="group relative flex">
+                        <button
+                          type="button"
+                          onClick={() => toggleSubCategory(sub)}
+                          className={`px-6 py-2 text-xs font-bold transition-all duration-300 pr-8 ${
+                            isActive
+                              ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                              : "border border-[var(--color-outline-variant)]/20 bg-[var(--color-surface-container-lowest)] hover:border-[var(--color-primary)] text-[var(--color-on-surface)]"
+                          }`}
+                        >
+                          {sub}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removePersistentSubCategory(sub);
+                          }}
+                          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 transition-all ${
+                            isActive ? "text-white/60 hover:text-white" : "text-[var(--color-on-surface-variant)]/40 hover:text-[var(--color-error)] opacity-0 group-hover:opacity-100"
+                          }`}
+                        >
+                          <X size={12} strokeWidth={3} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const custom = window.prompt("Enter Custom Sub Category (e.g., Summer Collection, Bridal):");
+                      if (custom && custom.trim()) {
+                        const normalized = custom.trim();
+                        toggleSubCategory(normalized);
+                        addPersistentSubCategory(normalized);
+                      }
+                    }}
+                    className="flex items-center gap-2 border border-dashed border-[var(--color-outline-variant)]/40 px-6 py-2 text-xs font-bold text-[var(--color-on-surface-variant)] transition-all duration-300 hover:bg-[var(--color-surface-container-high)]"
+                  >
+                    <Plus className="size-3.5" />
+                    Add Custom
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  name="subCategories"
+                  value={subCategoriesValue}
+                  onChange={(event) => setSubCategoriesValue(event.target.value)}
+                  className="w-full border-0 border-b border-[var(--color-outline-variant)]/20 bg-transparent py-2 text-sm text-[var(--color-on-surface)] focus:border-[var(--color-primary)] focus:outline-none"
+                  placeholder="Bridal, Party Wear"
+                />
+              </div>
             </div>
 
             <div>

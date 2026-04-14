@@ -1,32 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
+import { getSessionUid, requireSessionUid } from "@/lib/auth/session-user";
 import { revalidatePath } from "next/cache";
 import { getGuestId } from "@/app/cart/actions";
 import type { Address } from "@/lib/data";
-
-// ── Auth helpers ─────────────────────────────────────────────────────────────
-
-async function getUidFromSession(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
-  if (!sessionCookie) return null;
-
-  try {
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    return decoded?.uid ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function requireUid(): Promise<string> {
-  const uid = await getUidFromSession();
-  if (!uid) throw new Error("Unauthenticated");
-  return uid;
-}
 
 // ── Address actions ──────────────────────────────────────────────────────────
 
@@ -46,7 +25,7 @@ export async function addAddress(
   input: AddressInput
 ): Promise<{ success: true; address: Address } | { success: false; error: string }> {
   try {
-    const uid = await requireUid();
+    const uid = await requireSessionUid();
     const parsed = addressSchema.safeParse(input);
 
     if (!parsed.success) {
@@ -74,7 +53,7 @@ export async function removeAddress(
   addressId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const uid = await requireUid();
+    const uid = await requireSessionUid();
     const userRef = adminDb.collection("users").doc(uid);
     const snap = await userRef.get();
     const stored = (snap.data()?.addresses as Address[] | undefined) || [];
@@ -113,7 +92,7 @@ export async function updatePreferences(
   input: PreferencesInput
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const uid = await requireUid();
+    const uid = await requireSessionUid();
     const parsed = preferencesSchema.safeParse(input);
 
     if (!parsed.success) {
@@ -162,7 +141,7 @@ export type WishlistItem = {
 
 export async function getWishlistItems(): Promise<WishlistItem[]> {
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     let wishlistCollection;
 
     if (uid) {
@@ -184,7 +163,7 @@ export async function removeWishlistItem(
   itemId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     let wishlistCollection;
 
     if (uid) {
@@ -207,7 +186,7 @@ export async function toggleWishlistItem(
   item: WishlistItem
 ): Promise<{ success: boolean; added?: boolean; error?: string }> {
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     let wishlistCollection;
 
     if (uid) {
@@ -227,7 +206,9 @@ export async function toggleWishlistItem(
       return { success: true, added: false };
     } else {
       // Add it
-      const { id, ...data } = item;
+      const data = Object.fromEntries(
+        Object.entries(item).filter(([key]) => key !== "id")
+      ) as Omit<WishlistItem, "id">;
       await docRef.set({
         ...data,
         updatedAt: new Date().toISOString(),
@@ -243,7 +224,7 @@ export async function toggleWishlistItem(
 
 export async function getWishlistedIds(): Promise<string[]> {
   try {
-    const uid = await getUidFromSession();
+    const uid = await getSessionUid();
     let wishlistCollection;
 
     if (uid) {

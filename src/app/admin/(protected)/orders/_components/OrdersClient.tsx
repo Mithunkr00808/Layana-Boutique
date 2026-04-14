@@ -63,10 +63,10 @@ function getStatusStyle(status: string) {
 const formatInr = (value: number) =>
   `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function OrdersClient({ orders }: { orders: Order[] }) {
-  const [searchQuery, setSearchQuery] = useState('');
+export default function OrdersClient({ orders, expandId }: { orders: Order[], expandId?: string }) {
+  const [searchQuery, setSearchQuery] = useState(expandId || '');
   const [statusFilter, setStatusFilter] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(expandId || null);
 
   const filteredOrders = useMemo(() => {
     let result = orders;

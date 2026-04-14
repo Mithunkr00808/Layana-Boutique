@@ -2,7 +2,8 @@
 
 import { adminDb } from '@/lib/firebase/admin';
 import { uploadHeroImage } from '@/lib/cloudinary';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { assertAdminSession } from '@/lib/auth/admin-session';
 
 export async function saveHeroImages(imagesJson: string) {
@@ -15,8 +16,7 @@ export async function saveHeroImages(imagesJson: string) {
     const images = JSON.parse(imagesJson);
     await adminDb.collection('siteSettings').doc('hero').set({ images }, { merge: true });
     revalidatePath('/');
-    // @ts-expect-error - Next.js internal type mismatch
-    revalidateTag('settings');
+    updateTag('settings');
     return { success: true };
   } catch (err) {
     console.error('saveHeroImages error:', err);
@@ -60,8 +60,7 @@ export async function saveSocialSettings(formData: FormData) {
   try {
     await adminDb.collection('siteSettings').doc('social').set({ instagram, facebook, email }, { merge: true });
     revalidatePath('/');
-    // @ts-expect-error - Next.js internal type mismatch
-    revalidateTag('settings');
+    updateTag('settings');
     return { success: true };
   } catch (err) {
     console.error('saveSocialSettings error:', err);

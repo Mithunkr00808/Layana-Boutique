@@ -2,9 +2,11 @@
 "use server";
 
 import crypto from "crypto";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
-import { razorpay } from "@/lib/razorpay";
+import { z } from "zod";
+import { adminDb } from "@/lib/firebase/admin";
+import { getSessionUid } from "@/lib/auth/session-user";
+import { getUserAddressById } from "@/lib/addresses";
+import { getRazorpay } from "@/lib/razorpay";
 import { fulfillOrder } from "@/lib/orders";
 import type { CartItem } from "@/lib/data";
 
@@ -16,19 +18,20 @@ type VerifyResponse =
   | { success: true; orderId: string }
   | { success: false; error: string };
 
-async function getUidFromSession(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
-  if (!sessionCookie) return null;
+const createOrderInputSchema = z.object({
+  addressId: z.string().trim().min(1).max(128),
+  shippingMethod: z.enum(["standard", "express"]),
+});
 
-  try {
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    return decoded?.uid ?? null;
-  } catch (error) {
-    console.error("Failed to verify session cookie:", error);
-    return null;
-  }
-}
+const verifyPaymentInputSchema = z.object({
+  razorpay_order_id: z.string().trim().min(1).max(128),
+  razorpay_payment_id: z.string().trim().min(1).max(128),
+  razorpay_signature: z
+    .string()
+    .trim()
+    .regex(/^[a-fA-F0-9]{64}$/, "Invalid signature format"),
+  addressId: z.string().trim().min(1).max(128),
+});
 
 function parsePriceToNumber(price: unknown): number {
   if (typeof price === "number") return price;
@@ -86,6 +89,7 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
       const finalPrice = verifiedPrice;
       return {
         id: data.id ?? doc.id,
+        productId: productId,
         name: data.name ?? "Item",
         variant: data.variant ?? "",
         size: data.size ?? "",
@@ -117,7 +121,13 @@ export async function createOrder(
   }
 
   try {
-    const uid = await getUidFromSession();
+    const parsedInput = createOrderInputSchema.safeParse({ addressId, shippingMethod });
+    if (!parsedInput.success) {
+      return { error: "Invalid checkout input" };
+    }
+    const input = parsedInput.data;
+
+    const uid = await getSessionUid();
     if (!uid) {
       return { error: "Unauthenticated" };
     }
@@ -127,21 +137,20 @@ export async function createOrder(
       return { error: "Cart is empty or items are no longer available" };
     }
 
-    // Security: Validate address existence and ownership before creating order
-    const userDoc = await adminDb.collection("users").doc(uid).get();
-    const userData = userDoc.data();
-    const addresses = (userData?.addresses as any[]) || [];
-    const addressExists = addresses.some((addr) => addr.id === addressId);
-
-    if (!addressExists) {
+    // Security: Validate address existence and ownership before creating order.
+    // Supports both address models during migration:
+    //   1) users/{uid}/addresses/{addressId}
+    //   2) users/{uid}.addresses[]
+    const address = await getUserAddressById(uid, input.addressId);
+    if (!address) {
       return { error: "Delivery address not found. Please select a valid address." };
     }
 
-    const shippingCost = SHIPPING_COSTS[shippingMethod] ?? 0;
+    const shippingCost = SHIPPING_COSTS[input.shippingMethod] ?? 0;
     const total = subtotal + shippingCost;
     const amountPaise = Math.round(total * 100);
 
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount: amountPaise,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
@@ -152,10 +161,10 @@ export async function createOrder(
       items,
       subtotal,
       shippingCost,
-      shippingMethod,
+      shippingMethod: input.shippingMethod,
       amount: order.amount,
       currency: order.currency,
-      addressId,
+      addressId: input.addressId,
       status: "pending",
       createdAt: new Date().toISOString(),
     });
@@ -178,22 +187,33 @@ export async function verifyPayment(data: {
   }
 
   try {
-    const uid = await getUidFromSession();
+    const parsedInput = verifyPaymentInputSchema.safeParse(data);
+    if (!parsedInput.success) {
+      return { success: false, error: "Invalid payment payload" };
+    }
+    const input = parsedInput.data;
+
+    const uid = await getSessionUid();
     if (!uid) return { success: false, error: "Unauthenticated" };
 
     // ── HMAC Signature Verification ───────────────────────────────────
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET as string)
-      .update(`${data.razorpay_order_id}|${data.razorpay_payment_id}`)
+      .update(`${input.razorpay_order_id}|${input.razorpay_payment_id}`)
       .digest("hex");
 
-    if (expectedSignature !== data.razorpay_signature) {
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
+    const receivedBuffer = Buffer.from(input.razorpay_signature, "hex");
+    if (
+      expectedBuffer.length !== receivedBuffer.length ||
+      !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+    ) {
       return { success: false, error: "Invalid signature" };
     }
 
     // ── Ownership Verification ────────────────────────────────────────
     // Verify the pending order belongs to this user before fulfilling.
-    const pendingRef = adminDb.collection("pendingOrders").doc(data.razorpay_order_id);
+    const pendingRef = adminDb.collection("pendingOrders").doc(input.razorpay_order_id);
     const pendingDoc = await pendingRef.get();
 
     if (pendingDoc.exists) {
@@ -210,9 +230,9 @@ export async function verifyPayment(data: {
     //   • Atomic batch: order creation + inventory deduction + pending cleanup
     //   • Graceful cart cleanup (non-critical, won't roll back on failure)
     const result = await fulfillOrder(
-      data.razorpay_order_id,
-      data.razorpay_payment_id,
-      data.razorpay_signature
+      input.razorpay_order_id,
+      input.razorpay_payment_id,
+      input.razorpay_signature
     );
 
     if (result.success) {
