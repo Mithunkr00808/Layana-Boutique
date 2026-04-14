@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { Truck, Minus, Plus, Loader2 } from "lucide-react";
-import { useTransition } from "react";
-import { removeCartItem, updateCartItemQuantity } from "@/app/cart/actions";
+import { useState, useCallback } from "react";
+import { useCart } from "@/lib/contexts/CartContext";
 
 export interface CartItemType {
   id: string;
@@ -19,24 +19,99 @@ export interface CartItemType {
   rawOriginalPrice?: number;
 }
 
-export default function CartItems({ items }: { items: CartItemType[] }) {
-  const [isPending, startTransition] = useTransition();
+function CartItemRow({ item }: { item: CartItemType }) {
+  const { updateQuantity, removeItem } = useCart();
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+
   const formatInr = (value: number) =>
     `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const handleUpdateQuantity = (id: string, currentQty: number, change: number) => {
-    const newQty = currentQty + change;
-    if (newQty < 1) return; // Prevent going to 0 structurally for now
-    startTransition(async () => {
-      await updateCartItemQuantity(id, newQty);
-    });
-  };
+  const handleQuantityChange = useCallback(async (change: number) => {
+    const newQty = item.quantity + change;
+    if (newQty < 1) return;
+    setPendingAction(change > 0 ? "inc" : "dec");
+    await updateQuantity(item.id, newQty);
+    setPendingAction(null);
+  }, [item.id, item.quantity, updateQuantity]);
 
-  const handleRemove = (id: string) => {
-    startTransition(async () => {
-      await removeCartItem(id);
-    });
-  };
+  const handleRemove = useCallback(async () => {
+    setPendingAction("remove");
+    await removeItem(item.id);
+    setPendingAction(null);
+  }, [item.id, removeItem]);
+
+  const isPending = pendingAction !== null;
+
+  return (
+    <div className="grid grid-cols-6 items-center py-10 border-b border-[var(--color-outline-variant)]/10 group">
+      <div className="col-span-3 flex items-center gap-8">
+        <div className="w-24 h-32 rounded-[20px] bg-[var(--color-surface-container-low)] overflow-hidden shrink-0">
+          <Image
+            src={item.image}
+            alt={item.alt}
+            width={96}
+            height={128}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ease-out"
+          />
+        </div>
+        <div>
+          <h3 className="font-serif text-lg text-[var(--color-on-surface)] mb-1">{item.name}</h3>
+          <p className="font-sans text-xs text-zinc-500 tracking-wide uppercase">{item.variant}</p>
+          <button
+            onClick={handleRemove}
+            disabled={isPending}
+            className="mt-4 font-sans text-[10px] tracking-widest uppercase text-[var(--color-error)]/80 hover:text-[var(--color-error)] transition-colors disabled:opacity-40"
+          >
+            {pendingAction === "remove" ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      </div>
+      
+      <div className="text-center font-sans text-sm">
+        {["one size", "os"].includes(item.size.toLowerCase()) ? "" : item.size}
+      </div>
+      
+      <div className="flex justify-center items-center gap-4">
+        <button 
+          onClick={() => handleQuantityChange(-1)}
+          disabled={isPending || item.quantity <= 1}
+          className="text-zinc-500 hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
+        >
+          <Minus strokeWidth={1.5} size={16} />
+        </button>
+        <span className="font-sans text-sm w-6 text-center">
+          {pendingAction === "inc" || pendingAction === "dec" 
+            ? <Loader2 className="animate-spin inline" size={14} /> 
+            : item.quantity}
+        </span>
+        <button 
+          onClick={() => handleQuantityChange(1)}
+          disabled={isPending}
+          className="text-zinc-500 hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
+        >
+          <Plus strokeWidth={1.5} size={16} />
+        </button>
+      </div>
+      
+      <div className="text-right flex flex-col items-end">
+        <span className="font-serif text-lg text-[var(--color-on-surface)]">
+          {formatInr(item.rawPrice)}
+        </span>
+        {item.originalPrice && (
+          <span className="font-sans text-[10px] tracking-widest uppercase text-zinc-400 line-through">
+            {item.originalPrice}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function CartItems({ items: serverItems }: { items: CartItemType[] }) {
+  // Use CartContext as the single source of truth.
+  // Fall back to server-rendered items only for the initial render.
+  const { items: contextItems } = useCart();
+  const items = contextItems.length > 0 ? contextItems : serverItems;
 
   return (
     <div className="lg:col-span-8">
@@ -49,67 +124,9 @@ export default function CartItems({ items }: { items: CartItemType[] }) {
           <div className="text-right">Price</div>
         </div>
 
-        {/* Cart Items */}
+        {/* Cart Items — each row manages its own loading state */}
         {items.map((item) => (
-          <div key={item.id} className="grid grid-cols-6 items-center py-10 border-b border-[var(--color-outline-variant)]/10 group">
-            <div className="col-span-3 flex items-center gap-8">
-              <div className="w-24 h-32 rounded-[20px] bg-[var(--color-surface-container-low)] overflow-hidden shrink-0">
-                <Image
-                  src={item.image}
-                  alt={item.alt}
-                  width={96}
-                  height={128}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ease-out"
-                />
-              </div>
-              <div>
-                <h3 className="font-serif text-lg text-[var(--color-on-surface)] mb-1">{item.name}</h3>
-                <p className="font-sans text-xs text-zinc-500 tracking-wide uppercase">{item.variant}</p>
-                <button
-                  onClick={() => handleRemove(item.id)}
-                  disabled={isPending}
-                  className="mt-4 font-sans text-[10px] tracking-widest uppercase text-[var(--color-error)]/80 hover:text-[var(--color-error)] transition-colors disabled:opacity-40"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-            
-            <div className="text-center font-sans text-sm">
-              {["one size", "os"].includes(item.size.toLowerCase()) ? "" : item.size}
-            </div>
-            
-            <div className="flex justify-center items-center gap-4">
-              <button 
-                onClick={() => handleUpdateQuantity(item.id, item.quantity, -1)}
-                disabled={isPending || item.quantity <= 1}
-                className="text-zinc-500 hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
-              >
-                <Minus strokeWidth={1.5} size={16} />
-              </button>
-              <span className="font-sans text-sm w-4 text-center">
-                {isPending ? <Loader2 className="animate-spin text-xs inline" size={14} /> : item.quantity}
-              </span>
-              <button 
-                onClick={() => handleUpdateQuantity(item.id, item.quantity, 1)}
-                disabled={isPending}
-                className="text-zinc-500 hover:text-[var(--color-on-surface)] transition-colors disabled:opacity-30"
-              >
-                <Plus strokeWidth={1.5} size={16} />
-              </button>
-            </div>
-            
-            <div className="text-right flex flex-col items-end">
-              <span className="font-serif text-lg text-[var(--color-on-surface)]">
-                {formatInr(item.rawPrice)}
-              </span>
-              {item.originalPrice && (
-                <span className="font-sans text-[10px] tracking-widest uppercase text-zinc-400 line-through">
-                  {item.originalPrice}
-                </span>
-              )}
-            </div>
-          </div>
+          <CartItemRow key={item.id} item={item} />
         ))}
       </div>
 

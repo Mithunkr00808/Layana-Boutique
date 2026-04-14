@@ -3,8 +3,12 @@
 import { CreditCard, Building2, Smartphone } from "lucide-react";
 import { CartItemType } from "./CartItems";
 import { useRouter } from "next/navigation";
+import { useCart } from "@/lib/contexts/CartContext";
 
-export default function CartSummary({ items }: { items: CartItemType[] }) {
+export default function CartSummary({ items: serverItems }: { items: CartItemType[] }) {
+  const { items: contextItems } = useCart();
+  const items = contextItems.length > 0 ? contextItems : serverItems;
+
   const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
   const originalSubtotal = items.reduce((acc, item) => acc + (item.rawOriginalPrice ?? item.rawPrice) * item.quantity, 0);
   const discount = originalSubtotal - subtotal;
