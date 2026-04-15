@@ -11,7 +11,7 @@ export default async function ProtectedAdminLayout({
   return (
     <div className="flex min-h-screen bg-[#fbf9f8]">
       <AdminSidebar />
-      <main className="ml-64 flex-grow p-10">{children}</main>
+      <main className="flex-grow md:ml-64 px-4 pt-20 pb-6 md:p-10 md:pt-10">{children}</main>
     </div>
   );
 }

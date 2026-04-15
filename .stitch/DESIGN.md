@@ -1,8 +1,8 @@
-# Design System: Your Bag - Atelier Noir
+# Design System: Your Bag - Layana-Boutique Noir
 **Project ID:** 10392567449144506092
 
 ## 1. Visual Theme & Atmosphere
-The Creative North Star for this design system is **"The Digital Atelier."** 
+The Creative North Star for this design system is **"The Digital Layana-Boutique."** 
 This system moves away from the rigid, boxed-in nature of traditional e-commerce templates, instead embracing the expansive, intentional layouts of high-end fashion editorials. We treat the viewport as a gallery wall. By utilizing intentional asymmetry, oversized typography, and a "tonal layering" approach to depth, we create a digital experience that feels bespoke, hyper-realistic, and exclusive. 
 
 The goal is to let the product photography breathe. We do not "contain" content; we "curate" it. This is achieved through generous whitespace (utilizing the upper end of our spacing scale) and the total elimination of structural lines in favor of background-tonal shifts.

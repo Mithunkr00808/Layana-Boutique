@@ -1,6 +1,10 @@
 # Codebase Structure
 
-## Total Source Code: ~12,956 lines of TypeScript/TSX
+*Last reviewed: 2026-04-15*
+
+## Total Source Code
+- Large Next.js app with App Router storefront + admin surfaces.
+- Key hotspot files remain concentrated in checkout, admin actions, and shared data access modules.
 
 ## Directory Tree
 
@@ -107,7 +111,7 @@ src/
 │   └── useWishlist.ts            # Wishlist hook (alternative to context)
 │
 ├── lib/                          # Core business logic
-│   ├── data.ts                   # Central data layer (745 lines — MONOLITH)
+│   ├── data.ts                   # Central data layer (~683 lines — monolith)
 │   ├── orders.ts                 # Order fulfillment logic (232 lines)
 │   ├── addresses.ts              # Address lookup
 │   ├── cloudinary.ts             # Cloudinary SDK wrapper (174 lines)
@@ -134,7 +138,7 @@ src/
 ├── types/
 │   └── product-media.ts          # ProductMedia interface
 │
-└── proxy.ts                      # Middleware-like route protection (84 lines)
+└── proxy.ts                      # Next.js 16 proxy file-convention route protection
 
 ## Top-Level Config Files
 ├── next.config.ts                # Image domains, CSP, security headers, server actions limit
@@ -160,7 +164,7 @@ src/
 ## File Size Hotspots (Largest Source Files)
 | File | Lines | Purpose |
 |------|-------|---------|
-| `src/lib/data.ts` | 745 | Central data layer (monolith) |
+| `src/lib/data.ts` | ~683 | Central data layer (monolith) |
 | `src/app/checkout/CheckoutClient.tsx` | 471 | Checkout UI + Razorpay integration |
 | `src/app/admin/actions.ts` | 414 | Catalog CRUD with media handling |
 | `src/app/account/actions.ts` | 243 | Account management Server Actions |

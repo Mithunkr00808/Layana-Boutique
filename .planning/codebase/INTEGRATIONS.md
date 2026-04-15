@@ -1,5 +1,7 @@
 # External Integrations
 
+*Last reviewed: 2026-04-15*
+
 ## 1. Firebase Firestore (Primary Database)
 
 ### Client-Side SDK (`src/lib/firebase/config.ts`)
@@ -118,7 +120,7 @@ Both models are read transparently by `getUserAddresses()` and `getUserAddressBy
 
 ### Configuration (`src/lib/razorpay.ts`)
 - Singleton instance: `new Razorpay({ key_id, key_secret })`
-- Non-null assertion on env vars (will crash if missing)
+- Lazy initialization with explicit runtime validation for missing env vars
 
 ### Client Integration
 - Razorpay Checkout JS loaded via `next/script` in `CheckoutClient.tsx`
@@ -130,12 +132,14 @@ Both models are read transparently by `getUserAddresses()` and `getUserAddressBy
 - Zod schema validation of webhook payload
 - Only processes `order.paid` events; acknowledges all others with 200
 - Returns 500 on server errors (triggers Razorpay retry)
+- Known tradeoff: non-fulfillment business errors may still return 200 and require operational monitoring
 
 ### Security Features
 - **Server-side price recomputation**: `getVerifiedCart()` re-fetches prices from Firestore, never trusts client
 - **Stock capping**: Quantities capped at available inventory
 - **HMAC verification**: Both client verify and webhook verify use `crypto.timingSafeEqual`
 - **Ownership check**: Pending order UID must match authenticated user
+- **Legacy cart compatibility**: checkout now resolves product IDs from both modern `productId` field and legacy composite cart IDs
 
 ---
 
@@ -174,6 +178,5 @@ Applied globally to all routes:
 - **Content Security Policy**: Allowlists for Razorpay, Firebase, Cloudinary, Google Fonts
 
 ### Additional Security (`src/proxy.ts`)
-- `X-DNS-Prefetch-Control: on`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self)`
-- HSTS header (production only, in proxy)
+- Edge route gating for protected and auth routes with redirects based on session cookie presence.
+- App-wide security headers are centrally configured in `next.config.ts`.

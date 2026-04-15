@@ -11,7 +11,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MapPin, Plus, Edit, Trash2, Info } from "lucide-react";
+import { MapPin, Plus, Edit, Trash2 } from "lucide-react";
 
 const addressSchema = z.object({
   fullName: z.string().min(2, "Name is required"),
@@ -352,18 +352,6 @@ export default function AddressesPage() {
               </div>
             )}
 
-            <div className="mt-16 p-8 bg-zinc-50 rounded-xl flex items-start gap-4 border border-zinc-200/60">
-              <Info size={18} className="text-blue-900 mt-1" />
-              <div className="space-y-2 text-sm text-zinc-600">
-                <h4 className="font-semibold tracking-[0.15em] uppercase text-xs text-zinc-700">
-                  International Shipping
-                </h4>
-                <p className="leading-relaxed">
-                  Changes to your default address apply to future orders. For active shipments, contact concierge at{" "}
-                  <span className="text-blue-900 font-medium">concierge@ateliernoir.com</span>.
-                </p>
-              </div>
-            </div>
           </section>
         </div>
       </main>

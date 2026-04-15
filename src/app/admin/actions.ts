@@ -20,6 +20,7 @@ import { revalidateTag } from "next/cache";
 import { randomUUID } from "crypto";
 import type { ProductMedia } from "@/types/product-media";
 import { productSchema } from "@/lib/schemas/product";
+import { logAdminAuditEvent } from "@/lib/audit";
 
 type PersistedMediaInput = ProductMedia & {
   clientKey?: string;
@@ -113,7 +114,7 @@ function selectSummaryImage(media: ProductMedia[]) {
 }
 
 export async function saveCatalogItem(formData: FormData, existingId?: string) {
-  await assertAdminSession();
+  const adminSession = await assertAdminSession();
 
   if (!process.env.FIREBASE_PROJECT_ID) {
     throw new Error("Firebase Admin not configured.");
@@ -369,6 +370,17 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     revalidatePath(SHOP_CATALOG_PATH);
     revalidatePath(`/product/${id}`);
     revalidateTag("products", "default");
+    await logAdminAuditEvent({
+      actorUid: adminSession.uid,
+      actorEmail: adminSession.email,
+      action: existingId ? "catalog.update" : "catalog.create",
+      resourceType: "product",
+      resourceId: id,
+      metadata: {
+        category,
+        mediaCount: orderedMedia.length,
+      },
+    });
 
     return { success: true, id };
   } catch (error) {
@@ -387,7 +399,7 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
 }
 
 export async function deleteCatalogItem(id: string) {
-  await assertAdminSession();
+  const adminSession = await assertAdminSession();
 
   try {
     const detailRef = adminDb.collection("productDetails").doc(id);
@@ -415,6 +427,13 @@ export async function deleteCatalogItem(id: string) {
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
     revalidateTag("products", "default");
+    await logAdminAuditEvent({
+      actorUid: adminSession.uid,
+      actorEmail: adminSession.email,
+      action: "catalog.delete",
+      resourceType: "product",
+      resourceId: id,
+    });
 
     return { success: true };
   } catch (error) {

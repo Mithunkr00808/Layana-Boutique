@@ -8,6 +8,7 @@ import { getSessionUid } from "@/lib/auth/session-user";
 import { getUserAddressById } from "@/lib/addresses";
 import { getRazorpay } from "@/lib/razorpay";
 import { fulfillOrder } from "@/lib/orders";
+import { addTelemetryBreadcrumb, captureTelemetryError } from "@/lib/telemetry";
 import type { CartItem } from "@/lib/data";
 
 type OrderResponse =
@@ -169,6 +170,7 @@ export async function createOrder(
     if (!uid) {
       return { error: "Unauthenticated" };
     }
+    addTelemetryBreadcrumb("checkout createOrder started", "checkout", { uid });
 
     const { items, subtotal } = await getVerifiedCart(uid);
     if (!items.length || subtotal <= 0) {
@@ -210,6 +212,7 @@ export async function createOrder(
     return { orderId: order.id, amount: Number(order.amount), currency: String(order.currency) };
   } catch (error) {
     console.error("Failed to create Razorpay order:", error);
+    captureTelemetryError(error, "checkout_create_order_failed");
     return { error: "Failed to create order" };
   }
 }
@@ -233,6 +236,10 @@ export async function verifyPayment(data: {
 
     const uid = await getSessionUid();
     if (!uid) return { success: false, error: "Unauthenticated" };
+    addTelemetryBreadcrumb("checkout verifyPayment started", "checkout", {
+      uid,
+      orderId: input.razorpay_order_id,
+    });
 
     // ── HMAC Signature Verification ───────────────────────────────────
     const expectedSignature = crypto
@@ -274,12 +281,18 @@ export async function verifyPayment(data: {
     );
 
     if (result.success) {
+      addTelemetryBreadcrumb("checkout verifyPayment fulfilled", "checkout", {
+        orderId: input.razorpay_order_id,
+      });
       return { success: true, orderId: result.orderId };
     }
 
     return { success: false, error: result.error };
   } catch (error) {
     console.error("Failed to verify Razorpay payment:", error);
+    captureTelemetryError(error, "checkout_verify_payment_failed", {
+      orderId: data.razorpay_order_id,
+    });
     return { success: false, error: "Verification failed" };
   }
 }

@@ -32,12 +32,21 @@ export async function addAddress(
       return { success: false, error: parsed.error.issues[0]?.message || "Invalid address data" };
     }
 
-    const userRef = adminDb.collection("users").doc(uid);
-    const snap = await userRef.get();
-    const stored = (snap.data()?.addresses as Address[] | undefined) || [];
     const newEntry: Address = { ...parsed.data, id: crypto.randomUUID() };
-    const updated = [...stored, newEntry];
-    await userRef.set({ addresses: updated }, { merge: true });
+    const userRef = adminDb.collection("users").doc(uid);
+    const addressRef = userRef.collection("addresses").doc(newEntry.id);
+
+    await Promise.all([
+      // New canonical model
+      addressRef.set(newEntry, { merge: true }),
+      // Keep legacy array model in sync while migration completes
+      (async () => {
+        const snap = await userRef.get();
+        const stored = (snap.data()?.addresses as Address[] | undefined) || [];
+        const updated = [...stored, newEntry];
+        await userRef.set({ addresses: updated }, { merge: true });
+      })(),
+    ]);
 
     revalidatePath("/account/addresses");
     revalidatePath("/checkout");
@@ -55,15 +64,19 @@ export async function removeAddress(
   try {
     const uid = await requireSessionUid();
     const userRef = adminDb.collection("users").doc(uid);
-    const snap = await userRef.get();
-    const stored = (snap.data()?.addresses as Address[] | undefined) || [];
+    const addressRef = userRef.collection("addresses").doc(addressId);
+    const [addressDoc, userDoc] = await Promise.all([addressRef.get(), userRef.get()]);
+    const stored = (userDoc.data()?.addresses as Address[] | undefined) || [];
     const updated = stored.filter((addr) => addr.id !== addressId);
 
-    if (updated.length === stored.length) {
+    if (!addressDoc.exists && updated.length === stored.length) {
       return { success: false, error: "Address not found" };
     }
 
-    await userRef.set({ addresses: updated }, { merge: true });
+    await Promise.all([
+      addressRef.delete().catch(() => undefined),
+      userRef.set({ addresses: updated }, { merge: true }),
+    ]);
 
     revalidatePath("/account/addresses");
     revalidatePath("/checkout");

@@ -73,6 +73,17 @@ export interface CartItem {
   rawOriginalPrice?: number;
 }
 
+export interface WishlistItemSummary {
+  id: string;
+  name: string;
+  variant?: string;
+  size?: string;
+  price?: string;
+  rawPrice?: number;
+  image?: string;
+  alt?: string;
+}
+
 export interface Address {
   id: string;
   fullName: string;
@@ -503,6 +514,43 @@ export async function getCartItemsForUser(): Promise<CartItem[]> {
     return hydrated.filter(Boolean) as CartItem[];
   } catch (error) {
     console.error('Failed to verify session or fetch cart:', error);
+    return [];
+  }
+}
+
+export async function getUserWishlistItems(limit = 20): Promise<WishlistItemSummary[]> {
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    return [];
+  }
+
+  try {
+    const uid = await getSessionUid();
+    if (!uid) return [];
+
+    const snapshot = await adminDb
+      .collection("users")
+      .doc(uid)
+      .collection("wishlist")
+      .limit(limit)
+      .get();
+
+    if (snapshot.empty) return [];
+
+    return snapshot.docs.map((doc) => {
+      const data = doc.data() as Partial<WishlistItemSummary>;
+      return {
+        id: doc.id,
+        name: data.name ?? "Saved item",
+        variant: data.variant ?? "",
+        size: data.size ?? "",
+        price: data.price,
+        rawPrice: data.rawPrice ?? 0,
+        image: data.image ?? "",
+        alt: data.alt ?? data.name ?? "Saved item",
+      };
+    });
+  } catch (error) {
+    console.error("Failed to fetch user wishlist items:", error);
     return [];
   }
 }

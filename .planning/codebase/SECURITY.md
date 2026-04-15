@@ -1,6 +1,6 @@
 # Security Audit
 
-*Last reviewed: 2026-04-13*
+*Last reviewed: 2026-04-15*
 
 ## ✅ Security Strengths
 
@@ -21,70 +21,53 @@
 
 ### HIGH Priority
 
-#### 1. Missing Root Middleware — Route Protection Gap
-- **File**: `src/proxy.ts` exists but not wired as `middleware.ts`
-- **Impact**: Edge-level route protection may not be active. Unauthenticated users might momentarily load protected route RSC HTML before server-side checks redirect them.
-- **Mitigation**: Server-side guards (`requireAdminSession()`, `getSessionUid()`) provide backend enforcement.
-- **Fix**: Create `middleware.ts` at root: `export { proxy as middleware, config } from './src/proxy';`
+#### 1. CSP Still Permissive (`unsafe-eval` + `unsafe-inline`)
+- **File**: `next.config.ts`
+- **Impact**: XSS blast radius is higher than a strict nonce/hash CSP.
+- **Context**: Razorpay checkout and development tooling often drive this choice.
+- **Fix**: Move toward a stricter production CSP (nonce-based where feasible) and keep permissive directives only when demonstrably required.
 
-#### 2. Server Actions Body Size: 500MB
-- **File**: `next.config.ts` line 6 — `bodySizeLimit: "500mb"`
-- **Impact**: Denial-of-service vector. A malicious client can send 500MB payloads to any Server Action.
-- **Exploitation**: Simple HTTP POST to any Server Action endpoint with massive body.
-- **Fix**: Reduce to `10mb` or less. Media uploads go through Cloudinary, not Server Actions.
-
-#### 3. CSP Allows `unsafe-eval` and `unsafe-inline`
-- **File**: `next.config.ts` line 42
-- **Impact**: Weakens XSS protection. `unsafe-eval` allows `eval()` execution; `unsafe-inline` allows inline scripts.
-- **Reason**: Razorpay SDK likely requires `unsafe-eval`. Next.js dev mode requires both.
-- **Fix**: Use nonce-based CSP for production. Keep `unsafe-eval` only if Razorpay demands it.
+#### 2. No Rate Limiting on Auth/Mutation Surfaces
+- **Files**: `src/app/api/auth/session/route.ts`, `src/app/api/cart/migrate/route.ts`, webhook and server action entrypoints
+- **Impact**: Brute-force, abuse bursts, and elevated operational load risk.
+- **Fix**: Add IP/user scoped rate limiting (edge middleware or API-layer limiter).
 
 ### MEDIUM Priority
 
-#### 4. Non-null Assertions on Payment Secrets
-- **File**: `src/lib/razorpay.ts`
-```typescript
-key_id: process.env.RAZORPAY_KEY_ID!,
-key_secret: process.env.RAZORPAY_KEY_SECRET!,
-```
-- **Impact**: Server crash at module load if env vars missing. Uncaught error reveals stack trace.
-- **Fix**: Validate env vars at startup and throw descriptive error.
+#### 3. Admin UI Hint Cookie Can Become Stale
+- **File**: `src/app/api/auth/session/route.ts`
+- `isAdmin` cookie is set for 5 days and used as a UI hint.
+- **Impact**: Minor UX inconsistency if admin claim changes mid-session.
+- **Mitigation**: Server-side admin checks are authoritative and already enforced.
+- **Fix**: Consider removing `isAdmin` cookie and deriving role state from verified session responses.
 
-#### 5. Admin Cookie Staleness
-- **Session route** sets `isAdmin` cookie that persists for 5 days.
-- If admin permissions are revoked between logins, client-side UI still shows admin features.
-- **Mitigation**: Server-side checks prevent actual admin actions.
-- **Fix**: Don't cache admin status in a cookie; check claims on each request.
+#### 4. Address Storage Model Migration Still Incomplete
+- **Files**: `src/app/account/actions.ts`, `src/lib/addresses.ts`
+- Writes still go to `users/{uid}.addresses[]` while reads support both array and subcollection.
+- **Impact**: data consistency and long-term maintenance risk.
+- **Fix**: finish migration to `users/{uid}/addresses/{addressId}` and backfill old data.
 
-#### 6. Guest Cart Indefinite Persistence
-- Guest carts in `guest-carts/{guestId}` are never cleaned up unless the user logs in.
-- **Impact**: Firestore storage accumulation from abandoned guest sessions.
-- **Fix**: Implement a scheduled Cloud Function to purge stale guest carts (>30 days).
-
-#### 7. No Rate Limiting
-- No rate limiting on API routes or Server Actions.
-- **Impact**: Login brute force, cart spam, webhook replay attacks.
-- **Mitigation**: Razorpay webhook has signature verification.
-- **Fix**: Add rate limiting middleware (e.g., Upstash Redis or in-memory for simple cases).
+#### 5. No Structured Security Telemetry
+- **Current**: `console.error`/`console.warn` logging only.
+- **Impact**: difficult incident forensics, slow mean-time-to-detect.
+- **Fix**: add structured logs and alerting for auth failures, checkout failures, and webhook anomalies.
 
 ### LOW Priority
 
-#### 8. Webhook Returns 200 for Non-Fulfillment Errors
+#### 6. Runtime Razorpay Secret Validation Is Now Correct (Resolved)
+- **File**: `src/lib/razorpay.ts`
+- The prior non-null assertion concern is fixed via lazy initialization with explicit env validation.
+
+#### 7. Webhook Returns 200 for Non-Fulfillment Errors
 **File**: `src/app/api/webhooks/razorpay/route.ts` lines 174-178
 - When `fulfillOrder` returns `{ success: false }`, the webhook returns 200.
 - This prevents Razorpay retries, which is intentional for non-retryable errors.
 - **Concern**: If the error is transient, the order will never be fulfilled by webhook.
 - **Monitoring**: Needs alerting on webhook fulfillment failures.
 
-#### 9. No Audit Logging
-- Admin actions (catalog changes, order management) have no audit trail.
-- `console.error` is the only logging mechanism.
-- **Fix**: Add structured logging (e.g., Firestore `auditLog` collection).
-
-#### 10. External API Call Without Timeout
+#### 8. External API Call Timeout Handling Is Implemented (Resolved)
 **File**: `src/app/checkout/CheckoutClient.tsx` line 154
-- PIN code lookup to `api.postalpincode.in` has no timeout or abort controller.
-- **Impact**: Low — client-side only, best-effort.
+- PIN lookup uses `AbortController` + timeout guard.
 
 ## Authentication Flow Security Analysis
 
@@ -128,10 +111,8 @@ fulfillOrder() → Atomic batch with idempotency guard
 
 | Priority | Fix | Effort | Impact |
 |----------|-----|--------|--------|
-| 🔴 HIGH | Create root `middleware.ts` | 5 min | Route protection |
-| 🔴 HIGH | Reduce body size limit to 10mb | 1 min | DoS prevention |
-| 🟡 MEDIUM | Remove non-null assertions on payment keys | 10 min | Crash prevention |
+| 🔴 HIGH | Tighten production CSP policy | Medium | XSS hardening |
 | 🟡 MEDIUM | Add rate limiting | 2 hours | Brute force protection |
-| 🟡 MEDIUM | Implement guest cart cleanup | 1 hour | Storage costs |
-| 🟢 LOW | Add audit logging | 2 hours | Compliance |
-| 🟢 LOW | Nonce-based CSP | 3 hours | XSS hardening |
+| 🟡 MEDIUM | Complete address model migration | Medium | Data consistency |
+| 🟡 MEDIUM | Add structured telemetry/alerting | Medium | Incident response |
+| 🟢 LOW | Add admin audit logging | 2 hours | Compliance |

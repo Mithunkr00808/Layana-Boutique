@@ -2,8 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { csrfRejectedResponse, isSameOriginRequest } from "@/lib/security/csrf";
+import {
+  checkRateLimit,
+  getRateLimitKey,
+  purgeExpiredRateLimitBuckets,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
+
+type GuestCartItem = {
+  id: string;
+  productId: string;
+  size?: string;
+  quantity: number;
+};
 
 export async function POST(request: NextRequest) {
+  purgeExpiredRateLimitBuckets();
+  const rateLimitKey = getRateLimitKey(request, "api:cart:migrate");
+  const rateLimitResult = checkRateLimit(rateLimitKey, {
+    keyPrefix: "api:cart:migrate",
+    windowMs: 60_000,
+    maxRequests: 30,
+  });
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult);
+  }
+
   if (!isSameOriginRequest(request)) {
     return csrfRejectedResponse();
   }
@@ -23,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ migrated: false, reason: "no-uid" });
     }
 
-    let guestItems: any[] = [];
+    let guestItems: GuestCartItem[] = [];
     if (guestCartCookie) {
       try {
         guestItems = JSON.parse(guestCartCookie);

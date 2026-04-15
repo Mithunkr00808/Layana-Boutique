@@ -1026,7 +1026,7 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
                 name="sustainability"
                 defaultValue={initialData?.sustainability || ""}
                 className="w-full border-0 border-b border-[var(--color-outline-variant)]/20 bg-transparent py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none"
-                placeholder="Ethical sourcing, atelier-made finishing..."
+                placeholder="Ethical sourcing, Layana-Boutique-made finishing..."
               />
             </div>
           </div>
@@ -1064,7 +1064,7 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
               <>
                 <div className="h-2 w-2 rounded-full bg-[var(--color-primary)]/50" />
                 <span className="text-[0.65rem] font-medium tracking-tight">
-                  {uploadStatus || "Ready for atelier publication"}
+                  {uploadStatus || "Ready for Layana-Boutique publication"}
                 </span>
               </>
             )}

@@ -2,6 +2,13 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { fulfillOrder } from "@/lib/orders";
+import { addTelemetryBreadcrumb, captureTelemetryError } from "@/lib/telemetry";
+import {
+  checkRateLimit,
+  getRateLimitKey,
+  purgeExpiredRateLimitBuckets,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -83,10 +90,26 @@ function verifyWebhookSignature(
 // ── POST Handler ────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  purgeExpiredRateLimitBuckets();
+  // Keep webhook limit intentionally high to avoid disrupting gateway retries.
+  const rateLimitKey = getRateLimitKey(request, "api:webhook:razorpay");
+  const rateLimitResult = checkRateLimit(rateLimitKey, {
+    keyPrefix: "api:webhook:razorpay",
+    windowMs: 60_000,
+    maxRequests: 300,
+  });
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult);
+  }
+
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
     console.error("RAZORPAY_WEBHOOK_SECRET is not configured");
+    captureTelemetryError(
+      new Error("Missing RAZORPAY_WEBHOOK_SECRET"),
+      "webhook_razorpay_secret_missing"
+    );
     return NextResponse.json(
       { error: "Webhook not configured" },
       { status: 500 }
@@ -110,6 +133,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (!isValid) {
     console.warn("Razorpay webhook: invalid signature received");
+    addTelemetryBreadcrumb("razorpay webhook invalid signature", "webhook.razorpay");
     return NextResponse.json(
       { error: "Invalid signature" },
       { status: 401 }
@@ -130,6 +154,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     payload = parsed.data as RazorpayOrderPaidPayload;
   } catch {
     console.error("Razorpay webhook: failed to parse JSON body");
+    captureTelemetryError(new Error("Invalid webhook JSON"), "webhook_razorpay_json_parse_failed");
     return NextResponse.json(
       { error: "Invalid JSON" },
       { status: 400 }
@@ -140,6 +165,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // We only process `order.paid` events. All other events are acknowledged
   // with a 200 to prevent Razorpay from retrying them.
   if (payload.event !== "order.paid") {
+    addTelemetryBreadcrumb("razorpay webhook ignored event", "webhook.razorpay", {
+      event: payload.event,
+    });
     return NextResponse.json({ status: "ignored", event: payload.event });
   }
 
@@ -149,6 +177,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (!orderId || !paymentId) {
     console.error("Razorpay webhook: missing order_id or payment_id in payload");
+    captureTelemetryError(
+      new Error("Incomplete order.paid payload"),
+      "webhook_razorpay_incomplete_payload"
+    );
     return NextResponse.json(
       { error: "Incomplete payload" },
       { status: 400 }
@@ -159,6 +191,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // fulfillOrder is idempotent — if the client-side verifyPayment already
   // processed this order, it will simply return { alreadyFulfilled: true }.
   try {
+    addTelemetryBreadcrumb("razorpay webhook fulfillment started", "webhook.razorpay", {
+      orderId,
+      paymentId,
+    });
     const result = await fulfillOrder(orderId, paymentId);
 
     if (result.success) {
@@ -172,6 +208,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Non-retryable errors (e.g. pending order not found because it was
     // already cleaned up). Return 200 to prevent infinite retries.
     console.warn(`Razorpay webhook: fulfillment returned error for ${orderId}:`, result.error);
+    addTelemetryBreadcrumb("razorpay webhook non-retryable fulfillment error", "webhook.razorpay", {
+      orderId,
+    });
     return NextResponse.json({
       status: "error",
       error: result.error,
@@ -179,6 +218,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     // Server error — return 500 so Razorpay will retry
     console.error("Razorpay webhook: unexpected error during fulfillment:", error);
+    captureTelemetryError(error, "webhook_razorpay_fulfillment_unexpected_error", {
+      orderId,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

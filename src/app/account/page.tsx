@@ -2,10 +2,9 @@
 import Navbar from "@/components/Navbar";
 import AccountSidebar from "@/components/AccountSidebar";
 import { redirect } from "next/navigation";
-import { adminAuth } from "@/lib/firebase/admin";
 import { getSessionClaims } from "@/lib/auth/session-user";
-import { getUserOrders } from "@/lib/data";
-import { Settings, Mail, Sprout } from "lucide-react";
+import { getUserOrders, getUserWishlistItems } from "@/lib/data";
+import { Settings, Mail } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -50,9 +49,13 @@ async function getSessionUser() {
 }
 
 export default async function AccountPage() {
-  const [{ name, email }, orders] = await Promise.all([getSessionUser(), getUserOrders(5)]);
+  const [{ name, email }, orders, wishlistItems] = await Promise.all([
+    getSessionUser(),
+    getUserOrders(5),
+    getUserWishlistItems(4),
+  ]);
   const latestOrder = orders[0] || null;
-  const savedItems = latestOrder?.items?.slice(0, 4) || [];
+  const savedItems = wishlistItems;
   const displayName = name && name !== email ? name : "there";
 
   return (

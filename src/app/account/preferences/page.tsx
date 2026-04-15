@@ -12,12 +12,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { auth } from "@/lib/firebase/config";
-import {
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { updatePassword, signInWithEmailAndPassword } from "firebase/auth";
 
 const prefSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -28,7 +23,6 @@ const prefSchema = z.object({
     .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number (starts with 6-9)"),
   visibility: z.boolean().optional(),
   newsletter: z.boolean().optional(),
-  twoFactor: z.boolean().optional(),
 });
 
 const passwordSchema = z
@@ -66,7 +60,6 @@ export default function PreferencesPage() {
       phone: "",
       visibility: false,
       newsletter: true,
-      twoFactor: false,
     },
   });
 
@@ -96,7 +89,6 @@ export default function PreferencesPage() {
           phone: data.phone || "",
           visibility: data.preferences?.visibility ?? false,
           newsletter: data.preferences?.newsletter ?? true,
-          twoFactor: data.preferences?.twoFactor ?? false,
         });
       } catch (e) {
         console.error("Failed to load preferences:", e);
@@ -117,7 +109,6 @@ export default function PreferencesPage() {
         phone: values.phone,
         visibility: !!values.visibility,
         newsletter: !!values.newsletter,
-        twoFactor: !!values.twoFactor,
       });
 
       if (!result.success) {
@@ -275,19 +266,6 @@ export default function PreferencesPage() {
                     {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}
                   </div>
 
-                  <div className="flex items-center justify-between py-6 px-6 bg-[var(--color-surface-container-low,#f6f3f2)] rounded-lg transition-all duration-300 hover:bg-[var(--color-surface-container-high,#eae8e7)]">
-                    <div>
-                      <h4 className="text-sm font-medium">Two-Factor Authentication</h4>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Add a second step to keep your account secure.
-                      </p>
-                    </div>
-                    <label className="relative inline-flex h-5 w-10 cursor-pointer">
-                      <input type="checkbox" {...register("twoFactor")} className="peer sr-only" />
-                      <span className="bg-zinc-300 absolute h-4 w-full rounded-full transition-colors peer-checked:bg-blue-900"></span>
-                      <span className="bg-white absolute left-0 inline-block h-5 w-5 rounded-full border border-zinc-300 shadow transform transition peer-checked:translate-x-5"></span>
-                    </label>
-                  </div>
                 </div>
               </section>
 

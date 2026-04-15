@@ -23,7 +23,7 @@ export default function GlobalError({
         <i>Interruption</i>
       </h1>
       <p className="font-sans text-sm text-[var(--color-secondary)] mb-12 max-w-md text-center leading-relaxed">
-        We apologise for the inconvenience. Our digital atelier encountered an issue.
+        We apologise for the inconvenience. Our digital Layana-Boutique encountered an issue.
         Please try again.
       </p>
       <button

@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import { adminDb } from "@/lib/firebase/admin";
 import type { CartItem } from "@/lib/data";
 import { getUserAddressById } from "@/lib/addresses";
+import { addTelemetryBreadcrumb, captureTelemetryError } from "@/lib/telemetry";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,10 @@ export async function fulfillOrder(
   razorpayPaymentId: string,
   razorpaySignature?: string
 ): Promise<FulfillResult> {
+  addTelemetryBreadcrumb("fulfillOrder invoked", "orders", {
+    razorpayOrderId,
+    hasSignature: Boolean(razorpaySignature),
+  });
   const fulfillmentRef = adminDb.collection("orderFulfillments").doc(razorpayOrderId);
   const pendingRef = adminDb.collection("pendingOrders").doc(razorpayOrderId);
 
@@ -201,6 +206,9 @@ export async function fulfillOrder(
       }
     }
 
+    captureTelemetryError(error, "orders_fulfillment_batch_commit_failed", {
+      razorpayOrderId,
+    });
     throw error;
   }
 
@@ -222,6 +230,10 @@ export async function fulfillOrder(
   } catch (cartError) {
     // Log but don't fail — order is already secured
     console.warn("Cart cleanup failed (non-critical):", cartError);
+    captureTelemetryError(cartError, "orders_cart_cleanup_failed", {
+      razorpayOrderId,
+      uid: pending.uid,
+    });
   }
 
   return {

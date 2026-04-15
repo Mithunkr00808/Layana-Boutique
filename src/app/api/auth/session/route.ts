@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from "zod";
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { csrfRejectedResponse, isSameOriginRequest } from "@/lib/security/csrf";
+import {
+  checkRateLimit,
+  getRateLimitKey,
+  purgeExpiredRateLimitBuckets,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
 
 const sessionRequestSchema = z
   .object({
@@ -18,6 +24,17 @@ const sessionRequestSchema = z
   .strict();
 
 export async function POST(request: NextRequest) {
+  purgeExpiredRateLimitBuckets();
+  const rateLimitKey = getRateLimitKey(request, "api:auth:session");
+  const rateLimitResult = checkRateLimit(rateLimitKey, {
+    keyPrefix: "api:auth:session",
+    windowMs: 60_000,
+    maxRequests: 20,
+  });
+  if (!rateLimitResult.allowed) {
+    return rateLimitResponse(rateLimitResult);
+  }
+
   if (!isSameOriginRequest(request)) {
     return csrfRejectedResponse();
   }

@@ -19,9 +19,9 @@ export default function AdminLoginClient() {
 
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
-      window.location.assign("/admin");
+      router.replace("/admin");
     }
-  }, [authLoading, isAdmin, user]);
+  }, [authLoading, isAdmin, router, user]);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -63,7 +63,7 @@ export default function AdminLoginClient() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || (!!user && isAdmin)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fbf9f8]">
         <Loader2 className="animate-spin text-gray-400" size={32} />

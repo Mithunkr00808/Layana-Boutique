@@ -1,7 +1,9 @@
 # Codebase Stack
 
+*Last reviewed: 2026-04-15*
+
 ## Core Technologies
-- **Language**: TypeScript 5.x (strict-ish mode, `any` suppressed via eslint in data.ts/checkout)
+- **Language**: TypeScript 5.9.x (strict-ish mode, selective `any` suppressions remain)
 - **Framework**: Next.js 16.2.1 (App Router)
 - **UI Library**: React 19.2.4 (Server Components by default, selective `"use client"`)
 - **CSS Framework**: Tailwind CSS v4 (via `@tailwindcss/postcss`)
@@ -24,6 +26,23 @@
 - **Dev**: `next dev`
 - **Script Execution**: `tsx` 4.21 (for seed scripts)
 - **Linting**: ESLint 9 + `eslint-config-next`
+
+## Current Version Posture
+
+`npm outdated` shows the stack is modern and healthy, with only incremental updates pending:
+
+- **Core framework/runtime**
+  - `next` 16.2.1 → 16.2.3 (patch)
+  - `react` / `react-dom` 19.2.4 → 19.2.5 (patch)
+- **Backend/auth/data**
+  - `firebase` 12.11.0 → 12.12.0
+  - `firebase-admin` 13.7.0 → 13.8.0
+- **Tooling**
+  - `eslint-config-next` 16.2.1 → 16.2.3
+  - `react-hook-form` 7.72.0 → 7.72.1
+  - `dotenv` 17.4.1 → 17.4.2
+- **Not recommended yet**
+  - `typescript` 5.9.3 → 6.0.2 (major; defer until Next.js ecosystem guidance stabilizes for TS 6)
 
 ## Key Dependencies
 | Package | Version | Purpose |
@@ -50,3 +69,21 @@
 - `NEXT_PUBLIC_FIREBASE_*` (apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId)
 - `NEXT_PUBLIC_RAZORPAY_KEY_ID`
 - `NEXT_PUBLIC_SITE_URL`
+
+## Industry-Standard Fit Assessment
+
+### Keep as-is (strong fit)
+- Next.js App Router + React 19 + TypeScript
+- Firebase Auth session-cookie model with Admin SDK server verification
+- Firestore + Server Actions for mutation-heavy BFF pattern
+- Razorpay order lifecycle with server-side price recomputation and HMAC verification
+- Tailwind v4 + shadcn primitives for fast UI iteration
+
+### Upgrade soon (low-risk maintenance)
+- Apply the available patch/minor upgrades listed above.
+- Add a testing stack baseline (`playwright` for E2E + `vitest` for server utility tests).
+- Add observability (Sentry or OpenTelemetry + structured logs) for production incidents.
+
+### No stack replacement needed now
+- There is no evidence requiring migration away from Next.js/Firebase/Razorpay/Tailwind.
+- Current risks are implementation/process maturity gaps (testing, monitoring, data-model consistency), not core stack mismatch.

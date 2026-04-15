@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const config: NextConfig = {
   experimental: {
@@ -18,6 +19,25 @@ const config: NextConfig = {
     ],
   },
   async headers() {
+    const isDev = process.env.NODE_ENV !== "production";
+    const scriptSrc = [
+      "'self'",
+      "'unsafe-inline'",
+      ...(isDev ? ["'unsafe-eval'"] : []),
+      "https://checkout.razorpay.com",
+    ].join(" ");
+
+    const contentSecurityPolicy = [
+      "default-src 'self'",
+      `script-src ${scriptSrc}`,
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' blob: data: https:",
+      "media-src 'self' blob: https://res.cloudinary.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com",
+      "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://checkout.razorpay.com https://api.razorpay.com https://api.cloudinary.com",
+    ].join("; ");
+
     return [
       {
         source: "/(.*)",
@@ -40,7 +60,7 @@ const config: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https:; media-src 'self' blob: https://res.cloudinary.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://checkout.razorpay.com https://api.razorpay.com https://api.cloudinary.com;",
+            value: contentSecurityPolicy,
           },
         ],
       },
@@ -48,4 +68,6 @@ const config: NextConfig = {
   },
 };
 
-export default config;
+export default withSentryConfig(config, {
+  silent: true,
+});

@@ -24,7 +24,7 @@ const collectionRedirects: Record<string, string> = {
 
 type CategoryCollectionPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; sub?: string }>;
 };
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://layanaboutique.com";
@@ -54,6 +54,14 @@ function sortProducts(products: Awaited<ReturnType<typeof getReadyToWearProducts
     default:
       return sorted;
   }
+}
+
+function parseSubCategoryFilters(subParam: string | undefined): string[] {
+  if (!subParam) return [];
+  return subParam
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 export async function generateMetadata({
@@ -105,7 +113,7 @@ export async function generateMetadata({
 
 export default async function CollectionPage({ params, searchParams }: CategoryCollectionPageProps) {
   const { slug } = await params;
-  const { sort: sortParam } = await searchParams;
+  const { sort: sortParam, sub: subParam } = await searchParams;
   const activeSort = sortParam || "newest";
   const redirectTarget = collectionRedirects[slug];
 
@@ -125,10 +133,20 @@ export default async function CollectionPage({ params, searchParams }: CategoryC
 
   const config = getProductCategoryConfig(category);
   const rawProducts = await getReadyToWearProducts({ category });
-  const products = sortProducts(rawProducts, activeSort);
+  const selectedSubCategories = parseSubCategoryFilters(subParam);
+  const filteredProducts = selectedSubCategories.length
+    ? rawProducts.filter((product) =>
+        selectedSubCategories.some((selectedSubCategory) =>
+          (product.subCategories || []).some(
+            (subCategory) => subCategory.toLowerCase() === selectedSubCategory.toLowerCase()
+          )
+        )
+      )
+    : rawProducts;
+  const products = sortProducts(filteredProducts, activeSort);
   const currentYear = new Date().getFullYear();
 
-  const activeSubCategories = Array.from(
+  const availableSubCategories = Array.from(
     new Set(rawProducts.flatMap((p) => p.subCategories || []))
   ).filter(Boolean).sort();
 
@@ -163,14 +181,30 @@ export default async function CollectionPage({ params, searchParams }: CategoryC
               <SlidersHorizontal className="size-4" strokeWidth={1.5} />
             </button>
 
-            {activeSubCategories.length > 0 && (
+            {availableSubCategories.length > 0 && (
               <div className="hidden gap-8 text-xs uppercase tracking-widest text-[var(--color-secondary)] md:flex">
-                {activeSubCategories.map((sub) => {
+                {availableSubCategories.map((sub) => {
+                  const isActive = selectedSubCategories.some(
+                    (selected) => selected.toLowerCase() === sub.toLowerCase()
+                  );
+                  const toggledSubCategories = isActive
+                    ? selectedSubCategories.filter(
+                        (selected) => selected.toLowerCase() !== sub.toLowerCase()
+                      )
+                    : [...selectedSubCategories, sub];
+                  const subQuery = toggledSubCategories.join(",");
+
                   return (
                     <Link
                       key={sub}
-                      href={`/collections/${category}?sub=${encodeURIComponent(sub)}`}
-                      className="transition-colors hover:text-[var(--color-on-surface)]"
+                      href={`/collections/${category}?${
+                        subQuery ? `sub=${encodeURIComponent(subQuery)}&` : ""
+                      }${activeSort ? `sort=${encodeURIComponent(activeSort)}` : ""}`}
+                      className={`transition-colors hover:text-[var(--color-on-surface)] ${
+                        isActive
+                          ? "text-[var(--color-on-surface)] font-semibold"
+                          : ""
+                      }`}
                     >
                       {sub}
                     </Link>

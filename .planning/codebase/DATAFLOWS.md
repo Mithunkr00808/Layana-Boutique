@@ -1,5 +1,7 @@
 # Data Flow & Business Logic
 
+*Last reviewed: 2026-04-15*
+
 ## 1. Product Data Flow
 
 ```
@@ -48,11 +50,11 @@ addCartItem()                            addCartItem()
 LOGIN EVENT ─────────────────────────────────────────┘
        │
        ▼
-/api/cart/migrate (POST)            AND/OR    getCartItemsForUser()
+/api/cart/migrate (POST)            (single merge path)
        │                                          │
-       ├─ verifySessionCookie()                    ├─ mergeGuestToUser() [duplicate logic!]
-       ├─ Read guest-carts/{guestId}/items         ├─ Transaction: merge quantities
-       ├─ Transaction: merge quantities            └─ Delete guest-carts/{guestId}
+       ├─ verifySessionCookie()
+       ├─ Read guest-carts/{guestId}/items
+       ├─ Transaction: merge quantities
        └─ Delete guest-carts/{guestId}
 ```
 
@@ -189,4 +191,4 @@ Homepage / Footer                           │
 ```
 
 ### Legacy Migration
-`getSiteSettings()` transparently migrates old `{imageUrl, alt}` format to new `{images: [{imageUrl, alt}]}` format on read (no write-back).
+Primary settings reads now come from `src/lib/siteSettings.ts` which transparently migrates old `{imageUrl, alt}` format to `{images: [{imageUrl, alt}]}` on read (no write-back).

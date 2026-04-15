@@ -32,6 +32,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/admin/login', request.url));
   }
 
+  // If an authenticated session hits admin login, send them to admin dashboard
+  if (isAdminLoginRoute && session) {
+    return NextResponse.redirect(new URL('/admin', request.url));
+  }
+
   // Admin role is enforced server-side in protected admin layouts/actions.
 
   return NextResponse.next();

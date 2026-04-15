@@ -1,5 +1,7 @@
 # Testing State
 
+*Last reviewed: 2026-04-15*
+
 ## Current Ecosystem
 
 ### Automated Tests: None
@@ -29,14 +31,14 @@ The project relies entirely on:
 
 ## Recommended Testing Strategy
 
-### Phase 1: E2E Critical Paths (Playwright)
+### Phase 1: E2E Critical Paths (Playwright) — Industry Baseline
 Priority tests for the payment and auth flows:
 1. **Checkout flow**: Login → Add to cart → Checkout → Razorpay mock → Confirmation
 2. **Auth flow**: Signup → Login → Session persistence → Logout → Route protection
 3. **Admin flow**: Admin login → Catalog create/edit/delete → Media upload
 4. **Cart merge**: Guest cart → Login → Verify merged items
 
-### Phase 2: Integration Tests (Vitest)
+### Phase 2: Integration Tests (Vitest + firebase-admin mocks)
 Server Action testing with Firebase Admin SDK mocks:
 1. `fulfillOrder()` idempotency
 2. `createOrder()` price verification
@@ -56,3 +58,8 @@ React Testing Library for interactive components:
 - Razorpay SDK loading requires browser environment
 - Server Actions need special test harness (async form submission simulation)
 - Cloudinary uploads need mock or test account
+
+## Minimal Standard to Reach in Next Iteration
+- Add CI job running `npm run lint` and at least one E2E smoke suite.
+- Require checkout/auth smoke tests before production deploys.
+- Add failure reporting artifacts (videos/screenshots) from E2E runs for fast debugging.

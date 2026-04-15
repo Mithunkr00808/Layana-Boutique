@@ -1,9 +1,11 @@
 # Architecture
 
+*Last reviewed: 2026-04-15*
+
 ## Core Pattern
 - **App Router Architecture**: Next.js `app/` directory with Server Components by default. Client Components (`"use client"`) are used only for interactive state management (AuthContext, WishlistContext, CheckoutClient, cart mutations, admin forms).
 - **Server Actions for Mutations**: All write operations are performed via Server Actions (`"use server"`) in dedicated `actions.ts` files. This pattern keeps mutations isolated and server-only.
-- **No Root Middleware**: The project has a `src/proxy.ts` file exporting middleware-like logic (`proxy()` function with `config.matcher`), but **no `middleware.ts` at the project root**. Route protection relies on cookie-based checks in `proxy.ts` (for session redirects) and server-side session verification in layouts/actions.
+- **Proxy-Based Edge Gate**: The project uses `src/proxy.ts` (Next.js 16 file convention) with `config.matcher` for edge-level route gating. Route protection then gets reinforced by server-side verification in layouts/actions.
 
 ## Authentication Architecture
 
@@ -16,7 +18,7 @@
 ### Admin Protection
 - **Layout-Level**: `admin/(protected)/layout.tsx` calls `requireAdminSession()` which redirects to `/admin/login` if not admin.
 - **Action-Level**: Every admin Server Action begins with `await assertAdminSession()`.
-- **Middleware-Level**: `proxy.ts` checks for session cookie existence on admin routes.
+- **Edge-Level**: `proxy.ts` checks for session cookie existence on admin routes.
 - **Custom Claims**: Admin role is enforced via Firebase custom claims (`decoded.admin === true`).
 
 ### Guest Cart System
@@ -38,10 +40,15 @@ The central data access layer is a monolithic file containing:
 All prices stored as strings with `₹` prefix (e.g., `"₹1,299.00"`). The `formatIndianPrice()` helper converts raw numeric strings to Indian locale formatting. Cart items additionally store `rawPrice` as a numeric field for calculations.
 
 ### Cache Strategy
-- **`unstable_cache`** with named tags: `products`, `articles`, `settings`
+- **`unstable_cache`** with named tags: `products`, `articles`
 - **`revalidatePath`** on mutations: targets specific paths (`/admin/catalog`, `/collections/sarees`, `/product/{id}`)
 - **`revalidateTag`** for broader invalidation of product-related caches
 - **`force-dynamic`** on auth-dependent pages: checkout, account
+
+### Data Access Shape
+- `src/lib/data.ts` remains a central data access module (~683 lines), still carrying mixed concerns (types + reads + mapping + format helpers).
+- Order fulfillment has been cleanly extracted into `src/lib/orders.ts`.
+- Address reads are abstracted in `src/lib/addresses.ts`, while writes still target legacy user-document address arrays.
 
 ## Payment Flow (Razorpay)
 
