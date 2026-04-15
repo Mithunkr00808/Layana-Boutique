@@ -43,6 +43,47 @@ function parsePriceToNumber(price: unknown): number {
   return 0;
 }
 
+function resolveCartProductId(
+  data: Partial<CartItem> & { productId?: string },
+  docId: string
+): string {
+  if (typeof data.productId === "string" && data.productId.trim()) {
+    return data.productId.trim();
+  }
+
+  const rawId =
+    (typeof data.id === "string" && data.id.trim() ? data.id.trim() : docId) || docId;
+
+  // Legacy cart ids are often `${productId}-${size}`. Recover product id safely.
+  const normalizedSize = (data.size || "").trim().toLowerCase();
+  if (normalizedSize) {
+    const sizeSuffix = `-${normalizedSize}`;
+    if (rawId.toLowerCase().endsWith(sizeSuffix)) {
+      return rawId.slice(0, -sizeSuffix.length);
+    }
+  }
+
+  return rawId.replace(/-(onesize|one-size|os)$/i, "");
+}
+
+async function getAvailableStock(productId: string): Promise<number> {
+  const [productDoc, detailDoc] = await Promise.all([
+    adminDb.collection("products").doc(productId).get(),
+    adminDb.collection("productDetails").doc(productId).get(),
+  ]);
+
+  const productQty =
+    productDoc.exists && typeof productDoc.data()?.quantity === "number"
+      ? productDoc.data()!.quantity
+      : 0;
+  const detailQty =
+    detailDoc.exists && typeof detailDoc.data()?.quantity === "number"
+      ? detailDoc.data()!.quantity
+      : 0;
+
+  return Math.max(productQty, detailQty);
+}
+
 async function getVerifiedPrice(productId: string): Promise<number> {
   const productDoc = await adminDb.collection("products").doc(productId).get();
   if (productDoc.exists) {
@@ -69,18 +110,15 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
   const itemsResults = await Promise.all(
     snapshot.docs.map(async (doc) => {
       const data = doc.data() as Partial<CartItem> & { productId?: string };
-      
-      // The cart doc ID is a composite key (e.g. "product-abc-onesize"),
-      // so we must use the stored productId field for product lookups.
-      const productId = data.productId || data.id || doc.id;
+
+      const productId = resolveCartProductId(data, doc.id);
       
       // Security: Strictly verify price from server, no client fallback
       const verifiedPrice = await getVerifiedPrice(productId);
       if (verifiedPrice <= 0) return null;
 
       // Best-effort stock check
-      const productDoc = await adminDb.collection("products").doc(productId).get();
-      const stock = productDoc.exists ? (productDoc.data()?.quantity ?? 0) : 0;
+      const stock = await getAvailableStock(productId);
       const quantity = data.quantity ?? 1;
 
       // If stock is 0 but item is in cart, we filter it out to prevent purchase
