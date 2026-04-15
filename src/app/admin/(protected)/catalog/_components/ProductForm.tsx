@@ -71,6 +71,7 @@ type InitialData = {
   sustainability?: string;
   price?: string;
   hasSizes?: boolean;
+  subCategories?: string[];
 };
 
 type ExistingFormMedia = ProductMedia & {

@@ -368,7 +368,7 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
     revalidatePath(`/product/${id}`);
-    revalidateTag("products");
+    revalidateTag("products", "default");
 
     return { success: true, id };
   } catch (error) {
@@ -414,7 +414,7 @@ export async function deleteCatalogItem(id: string) {
 
     revalidatePath("/admin/catalog");
     revalidatePath(SHOP_CATALOG_PATH);
-    revalidateTag("products");
+    revalidateTag("products", "default");
 
     return { success: true };
   } catch (error) {

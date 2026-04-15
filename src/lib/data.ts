@@ -330,7 +330,7 @@ export async function getProductDetail(id: string): Promise<ProductDetail | null
         description: summary.options 
           ? `Made from ${summary.options}. This product has not had its full description, materials, or editorial images uploaded yet.` 
           : 'Full product description is pending. Please update via the admin panel.',
-        materials: ['Detail pending - Update via catalog admin'],
+        materials: 'Detail pending - Update via catalog admin',
         sustainability: 'Sustainability tracking pending',
         images: summary.image
           ? [
