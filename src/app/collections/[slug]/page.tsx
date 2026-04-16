@@ -15,6 +15,7 @@ import {
   getProductCategoryConfig,
   resolveProductCategorySlug,
 } from "@/lib/catalog/categories";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ type CategoryCollectionPageProps = {
   searchParams: Promise<{ sort?: string; sub?: string }>;
 };
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://layanaboutique.com";
+const BASE_URL = getSiteUrl();
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
@@ -92,7 +93,7 @@ export async function generateMetadata({
       siteName: "Layana Boutique",
       images: [
         {
-          url: "/og-image.png",
+          url: "/opengraph-image",
           width: 1200,
           height: 630,
           alt: `${config.label} — Layana Boutique Collection`,
@@ -103,7 +104,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: `${config.label} | Layana Boutique`,
       description,
-      images: ["/og-image.png"],
+      images: ["/opengraph-image"],
     },
     alternates: {
       canonical: `/collections/${category}`,
@@ -307,6 +308,33 @@ export default async function CollectionPage({ params, searchParams }: CategoryC
           >
             Next
           </button>
+        </section>
+
+        <section className="mb-36 grid gap-6 rounded-2xl border border-[var(--color-outline-variant)]/30 bg-[var(--color-surface-container-lowest)] p-8 md:grid-cols-3 md:p-10">
+          <div className="md:col-span-2">
+            <h2 className="font-serif text-3xl font-light text-[var(--color-on-surface)]">
+              Discover premium {config.label.toLowerCase()} online
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--color-secondary)]">
+              Explore curated {config.label.toLowerCase()} at Layana Boutique with attention to
+              fabric quality, fit, and occasion-ready styling. Filter by subcategories to compare
+              pieces and find your ideal look faster.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)]">
+              Explore more collections
+            </p>
+            {PRODUCT_CATEGORY_OPTIONS.filter((option) => option.value !== category).map((option) => (
+              <Link
+                key={option.value}
+                href={getCategoryHref(option.value)}
+                className="block text-sm text-[var(--color-on-surface)] underline underline-offset-4 hover:opacity-70"
+              >
+                Shop {option.label}
+              </Link>
+            ))}
+          </div>
         </section>
       </main>
     </div>

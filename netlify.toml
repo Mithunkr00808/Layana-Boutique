@@ -8,3 +8,33 @@
 
 [build]
   command = "npm run build"
+
+[[redirects]]
+  from = "https://www.layanaboutique.in/*"
+  to = "https://layanaboutique.in/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://layanaboutique.in/*"
+  to = "https://layanaboutique.in/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.layanaboutique.in/*"
+  to = "https://layanaboutique.in/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://layanaboutique.com/*"
+  to = "https://layanaboutique.in/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.layanaboutique.com/*"
+  to = "https://layanaboutique.in/:splat"
+  status = 301
+  force = true

@@ -3,6 +3,7 @@ import { Noto_Serif, Manrope, Geist } from "next/font/google";
 import AppProviders from "@/components/AppProviders";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import FooterWithData from "@/components/FooterWithData";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ export const viewport: Viewport = {
   themeColor: "#fbf9f8",
 };
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://layanaboutique.com";
+const BASE_URL = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -59,7 +60,7 @@ export const metadata: Metadata = {
       "Shop luxury designer sarees, premium kurties and ethnic kids wear. Handpicked Indian fashion with artisanal craftsmanship.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "Layana Boutique — Designer Sarees, Kurties & Kids Wear",
@@ -71,7 +72,7 @@ export const metadata: Metadata = {
     title: "Layana Boutique — Designer Sarees, Kurties & Kids Wear",
     description:
       "Shop luxury designer sarees, premium kurties and ethnic kids wear at Layana Boutique.",
-    images: ["/og-image.png"],
+    images: ["/opengraph-image"],
   },
 };
 

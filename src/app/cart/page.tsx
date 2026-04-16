@@ -8,6 +8,10 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Your Selection",
   description: "Explore the items currently curated in your selection.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const dynamic = "force-dynamic";

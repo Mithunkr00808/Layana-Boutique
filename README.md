@@ -14,9 +14,17 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 NEXT_PUBLIC_SENTRY_DSN=
 NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
 NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
+
+# Public canonical site URL used by metadata/sitemap/JSON-LD
+NEXT_PUBLIC_SITE_URL=https://layanaboutique.in
 ```
 
 Sentry initialization is no-op when DSN values are unset, so local development works without telemetry setup.
+
+## SEO Launch
+
+- Use `NEXT_PUBLIC_SITE_URL=https://layanaboutique.in` in Netlify production env.
+- Follow the launch verification runbook in `docs/seo-launch-checklist.md`.
 
 ## Getting Started
 

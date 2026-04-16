@@ -8,6 +8,10 @@ import { getSessionUid } from "@/lib/auth/session-user";
 export const metadata: Metadata = {
   title: "Checkout",
   description: "Complete your purchase",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const dynamic = "force-dynamic";

@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next';
 import { getReadyToWearProducts } from '@/lib/data';
+import { getSiteUrl } from "@/lib/site-url";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://layanaboutique.com';
+const BASE_URL = getSiteUrl();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date().toISOString();
+  const now = new Date();
 
   // Core public static routes (no private/auth pages)
   const staticRoutes: MetadataRoute.Sitemap = [

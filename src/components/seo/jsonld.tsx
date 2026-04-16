@@ -1,6 +1,7 @@
 import type { ProductDetail } from "@/lib/data";
+import { getSiteUrl } from "@/lib/site-url";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://layanaboutique.com";
+const BASE_URL = getSiteUrl();
 
 // ── Organization (Brand identity for Google Knowledge Panel) ────────────
 
@@ -10,7 +11,7 @@ export function OrganizationJsonLd() {
     "@type": "Organization",
     name: "Layana Boutique",
     url: BASE_URL,
-    logo: `${BASE_URL}/og-image.png`,
+    logo: `${BASE_URL}/opengraph-image`,
     description:
       "Premium Indian ethnic wear boutique specializing in designer sarees, kurties, and kids wear.",
     contactPoint: {
@@ -63,7 +64,7 @@ interface ProductJsonLdProps {
 
 export function ProductJsonLd({ product, productId }: ProductJsonLdProps) {
   const price = parseFloat((product.price || "0").replace(/[^0-9.]/g, ""));
-  const image = product.images?.[0]?.src || `${BASE_URL}/og-image.png`;
+  const image = product.images?.[0]?.src || `${BASE_URL}/opengraph-image`;
 
   const schema = {
     "@context": "https://schema.org",
