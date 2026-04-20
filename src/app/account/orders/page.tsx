@@ -6,6 +6,7 @@ import { adminAuth } from "@/lib/firebase/admin";
 import { getSessionClaims } from "@/lib/auth/session-user";
 import Link from "next/link";
 import Image from "next/image";
+import CancelOrderButton from "./CancelOrderButton";
 
 export const dynamic = "force-dynamic";
 
@@ -126,14 +127,19 @@ export default async function OrdersPage() {
                       <div className="flex gap-4">
                         <Link
                           href={`/order/${order.id}/confirmation`}
-                          className="text-xs uppercase tracking-widest font-semibold border-b border-blue-900 text-blue-900 pb-0.5 hover:opacity-70 transition"
+                          className="text-xs uppercase tracking-widest font-semibold border-b border-blue-900 text-blue-900 pb-0.5 hover:opacity-70 transition block mt-auto"
                         >
                           View Details
                         </Link>
+                        
                         {order.status?.toLowerCase() === "shipped" && (
                           <button className="text-xs uppercase tracking-widest font-semibold bg-blue-900 text-white px-6 py-3 rounded-lg hover:shadow-lg transition">
                             Track Order
                           </button>
+                        )}
+
+                        {(order.status?.toLowerCase() === "paid" || order.status?.toLowerCase() === "processing") && (
+                          <CancelOrderButton orderId={order.id} />
                         )}
                       </div>
                     </div>

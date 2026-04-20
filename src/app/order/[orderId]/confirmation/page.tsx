@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Order Confirmed",
-  description: "Your Layana Boutique order has been confirmed.",
+  title: "Order Details",
+  description: "View details of your Layana Boutique order.",
   robots: {
     index: false,
     follow: false,
@@ -36,18 +36,20 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
       <Navbar />
       <main className="flex-grow max-w-[1440px] mx-auto px-6 md:px-10 pt-16 mt-20 pb-20">
         <header className="mb-14 flex items-start gap-4">
-          <div className="h-12 w-12 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center text-xl">
-            ✓
+          <div className={`h-12 w-12 rounded-full text-white flex items-center justify-center text-xl ${order.status === 'cancelled' ? 'bg-red-600' : 'bg-[var(--color-primary)]'}`}>
+            {order.status === 'cancelled' ? '✕' : '✓'}
           </div>
           <div>
             <p className="font-sans text-[var(--color-secondary)] text-xs tracking-[0.25em] uppercase mb-2">
-              Order Confirmed
+              {order.status === 'cancelled' ? "Order Cancelled" : "Order Confirmed"}
             </p>
             <h1 className="font-serif text-5xl md:text-6xl font-light italic text-[var(--color-on-surface)]">
-              Thank you for your purchase
+              {order.status === 'cancelled' ? "Order Cancelled" : "Thank you for your purchase"}
             </h1>
             <p className="font-sans text-sm text-[var(--color-secondary)] mt-3">
-              Your payment has been verified and your order is being prepared.
+              {order.status === 'cancelled' 
+                ? "Your order has been successfully cancelled and your refund has been processed." 
+                : "Your payment has been verified and your order is being prepared."}
             </p>
           </div>
         </header>
