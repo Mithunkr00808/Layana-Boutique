@@ -70,6 +70,24 @@ export async function POST(request: NextRequest) {
           createdAt: new Date().toISOString(),
         });
       }
+    } else if (decodedToken.uid) {
+      // Auto-create user profile from auth token for OAuth sign-ins (Google, etc.)
+      // The decodedToken already contains name/email/picture from the OAuth provider
+      const userRef = adminDb.collection('users').doc(decodedToken.uid);
+      const existingDoc = await userRef.get();
+
+      if (!existingDoc.exists) {
+        const nameParts = (decodedToken.name || '').trim().split(' ');
+        await userRef.set({
+          firstName: String(nameParts[0] || '').slice(0, 100),
+          lastName: String(nameParts.slice(1).join(' ') || '').slice(0, 100),
+          fullName: String(decodedToken.name || '').trim().slice(0, 200),
+          email: decodedToken.email || '',
+          photoURL: decodedToken.picture || '',
+          authProvider: decodedToken.firebase?.sign_in_provider || 'unknown',
+          createdAt: new Date().toISOString(),
+        });
+      }
     }
 
     // Set session expiration to 5 days.

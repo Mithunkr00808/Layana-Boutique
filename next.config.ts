@@ -29,13 +29,13 @@ const config: NextConfig = {
 
     const contentSecurityPolicy = [
       "default-src 'self'",
-      `script-src ${scriptSrc}`,
+      `script-src ${scriptSrc} https://apis.google.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' blob: data: https:",
       "media-src 'self' blob: https://res.cloudinary.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com",
-      "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://checkout.razorpay.com https://api.razorpay.com https://api.cloudinary.com",
+      "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com https://*.firebaseapp.com",
+      "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://checkout.razorpay.com https://api.razorpay.com https://api.cloudinary.com https://accounts.google.com https://www.googleapis.com https://*.firebaseapp.com",
     ].join("; ");
 
     return [

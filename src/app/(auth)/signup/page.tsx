@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import GoogleSignInButton from "@/components/ui/GoogleSignInButton";
 
 const signupSchema = z.object({
   firstName: z.string().min(2, "First name is strictly required"),
@@ -21,8 +23,16 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already signed in (handles Google sign-in via AuthContext)
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/account");
+    }
+  }, [user, authLoading, router]);
 
   const {
     register,
@@ -85,6 +95,24 @@ export default function SignupPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 shadow-sm rounded-lg sm:px-10 border border-zinc-100">
+          <div className="mb-6">
+              <GoogleSignInButton
+                redirectTo="/account"
+                label="signup"
+              />
+            </div>
+
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-200" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-zinc-500">
+                  or create with email
+                </span>
+              </div>
+            </div>
+
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             {error && (
               <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm border border-red-100">

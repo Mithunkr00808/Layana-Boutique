@@ -9,6 +9,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import GoogleSignInButton from "@/components/ui/GoogleSignInButton";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -167,6 +168,26 @@ function LoginPageContent() {
               </button>
             </div>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-200" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-zinc-500">
+                  or continue with
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <GoogleSignInButton
+                redirectTo={redirectTarget}
+                label="signin"
+              />
+            </div>
+          </div>
 
           <div className="mt-6">
             <div className="relative">
