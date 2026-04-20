@@ -107,7 +107,7 @@ export interface Order {
   shipping: number;
   total: number;
   currency: string;
-  status: "paid" | "failed";
+  status: "paid" | "failed" | "processing" | "shipped" | "delivered" | "cancelled";
   address?: Address | null;
   createdAt: any; // Firestore Timestamp
 }
