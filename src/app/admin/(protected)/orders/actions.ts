@@ -3,6 +3,8 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { assertAdminSession } from '@/lib/auth/admin-session';
 import { revalidatePath } from 'next/cache';
+import { sendOrderStatusEmail } from '@/lib/email/actions';
+import { captureTelemetryError } from '@/lib/telemetry';
 
 const VALID_STATUSES = ['paid', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
 type OrderStatus = (typeof VALID_STATUSES)[number];
@@ -30,6 +32,15 @@ export async function updateOrderStatus(
     }
 
     await orderRef.update({ status: newStatus });
+
+    // ── Dispatch Status Email ─────
+    try {
+      await sendOrderStatusEmail(orderId, newStatus);
+    } catch (err) {
+      console.error("Email dispatch failed:", err);
+      captureTelemetryError(err, "email_dispatch_failed", { orderId, type: "status_update", status: newStatus });
+    }
+
     revalidatePath('/admin/orders');
     revalidatePath('/admin');
 

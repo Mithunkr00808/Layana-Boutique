@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import type { CartItem } from "@/lib/data";
 import { getUserAddressById } from "@/lib/addresses";
 import { addTelemetryBreadcrumb, captureTelemetryError } from "@/lib/telemetry";
+import { sendOrderConfirmationEmail } from "@/lib/email/actions";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -234,6 +235,16 @@ export async function fulfillOrder(
       razorpayOrderId,
       uid: pending.uid,
     });
+  }
+
+  // ── Dispatch Confirmation Email ─────
+  // We explicitly await this. In Server Actions (and serverless environments),
+  // floating promises are often aggressively terminated when the response returns.
+  try {
+    await sendOrderConfirmationEmail(orderRef.id);
+  } catch (err) {
+    console.error("Email dispatch failed:", err);
+    captureTelemetryError(err, "email_dispatch_failed", { orderId: orderRef.id });
   }
 
   return {
