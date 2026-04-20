@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import CheckoutClient from "./CheckoutClient";
 import { getCartItemsForUser, getUserAddresses } from "@/lib/data";
-import { redirect } from "next/navigation";
+import SafeRedirect from "@/components/SafeRedirect";
 import type { Metadata } from "next";
 import { getSessionUid } from "@/lib/auth/session-user";
 
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function CheckoutPage() {
   const uid = await getSessionUid();
   if (!uid) {
-    redirect("/account");
+    return <SafeRedirect to="/account" />;
   }
 
   const [items, addresses] = await Promise.all([
@@ -28,7 +28,7 @@ export default async function CheckoutPage() {
   ]);
 
   if (!items.length) {
-    redirect("/cart");
+    return <SafeRedirect to="/cart" />;
   }
 
   const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
