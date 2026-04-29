@@ -8,6 +8,8 @@ import FadeIn from "@/components/FadeIn";
 import { getNewArrivals, getJournalArticles } from "@/lib/data";
 import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/jsonld";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [newArrivals, articles] = await Promise.all([
     getNewArrivals(),

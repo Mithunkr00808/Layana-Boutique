@@ -17,18 +17,47 @@ export interface CartItem {
   rawOriginalPrice?: number;
 }
 
+type AddCartItemInput = Parameters<typeof addCartItem>[0];
+
 interface CartContextType {
   items: CartItem[];
   itemCount: number;
   subtotal: number;
-  addItem: (item: any) => Promise<void>;
+  addItem: (item: AddCartItemInput) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   updateQuantity: (id: string, quantity: number) => Promise<void>;
   refreshCart: () => Promise<void>;
   isPending: boolean;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+const fallbackCartContext: CartContextType = {
+  items: [],
+  itemCount: 0,
+  subtotal: 0,
+  addItem: async () => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Cart action skipped because CartProvider is unavailable.");
+    }
+  },
+  removeItem: async () => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Cart action skipped because CartProvider is unavailable.");
+    }
+  },
+  updateQuantity: async () => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Cart action skipped because CartProvider is unavailable.");
+    }
+  },
+  refreshCart: async () => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Cart refresh skipped because CartProvider is unavailable.");
+    }
+  },
+  isPending: false,
+};
+
+const CartContext = createContext<CartContextType>(fallbackCartContext);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -40,13 +69,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    refreshCart();
+    let isActive = true;
+
+    void fetchCartItems().then((data) => {
+      if (isActive) {
+        setItems(data as CartItem[]);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
   const subtotal = items.reduce((acc, item) => acc + item.rawPrice * item.quantity, 0);
 
-  const addItem = async (input: any) => {
+  const addItem = async (input: AddCartItemInput) => {
     // Optimistic Logic: Check if exists
     const docId = `${input.productId}-${input.size || "onesize"}`;
     const existingIndex = items.findIndex((i) => i.id === docId);
@@ -132,8 +171,5 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
   return context;
 }

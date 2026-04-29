@@ -184,11 +184,8 @@ export default function ProductDetails(props: ProductDetailsProps) {
         {/* Sizing */}
         {props.hasSizes !== false && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div>
               <span className="font-sans text-xs uppercase tracking-widest">Select Size</span>
-              <button className="font-sans text-xs uppercase tracking-widest text-[var(--color-on-surface-variant)] underline underline-offset-4 hover:text-[var(--color-on-surface)] transition-colors">
-                Size Guide
-              </button>
             </div>
 
             <div className="grid grid-cols-4 gap-3">

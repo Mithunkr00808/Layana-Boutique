@@ -91,3 +91,31 @@ export async function saveSocialSettings(formData: FormData) {
     return { success: false, error: 'Failed to save social settings.' };
   }
 }
+
+export async function savePoliciesSettings(formData: FormData) {
+  const adminSession = await assertAdminSession();
+  const refundPolicy = formData.get('refundPolicy')?.toString() || '';
+  const termsOfUse = formData.get('termsOfUse')?.toString() || '';
+
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    return { success: false, error: 'Firebase not configured.' };
+  }
+
+  try {
+    await adminDb.collection('siteSettings').doc('policies').set({ refundPolicy, termsOfUse }, { merge: true });
+    revalidatePath('/refund-policy');
+    revalidatePath('/terms-of-use');
+    updateTag('settings');
+    await logAdminAuditEvent({
+      actorUid: adminSession.uid,
+      actorEmail: adminSession.email,
+      action: 'settings.policies.update',
+      resourceType: 'siteSettings',
+      resourceId: 'policies',
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('savePoliciesSettings error:', err);
+    return { success: false, error: 'Failed to save policies.' };
+  }
+}

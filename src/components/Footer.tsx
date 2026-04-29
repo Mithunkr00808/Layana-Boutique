@@ -36,7 +36,7 @@ export default function Footer({ social }: FooterProps) {
 
   return (
     <footer className="w-full pt-20 pb-10 bg-[var(--color-surface-low)]">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-12 px-10 max-w-[1440px] mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-12 px-10 max-w-[1440px] mx-auto">
         <div className="flex flex-col gap-6">
           <Link href="/" className="font-serif text-xl italic text-zinc-900">
             Layana Boutique
@@ -62,6 +62,18 @@ export default function Footer({ social }: FooterProps) {
           ))}
           <Link href="/cart" className="font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 underline-offset-4 hover:underline transition-all">
             Your Bag
+          </Link>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <h4 className="font-sans text-xs font-bold tracking-widest uppercase text-zinc-900">
+            Policies
+          </h4>
+          <Link href="/refund-policy" className="font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 underline-offset-4 hover:underline transition-all">
+            Refund Policy
+          </Link>
+          <Link href="/terms-of-use" className="font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 underline-offset-4 hover:underline transition-all">
+            Terms of Use
           </Link>
         </div>
 

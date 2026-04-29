@@ -3,7 +3,8 @@
 import Image from 'next/image';
 import { useRef, useState, useTransition, useCallback } from 'react';
 import { ImageIcon, Mail, CheckCircle2, AlertCircle, Save, Upload, X, Trash2 } from 'lucide-react';
-import { uploadHeroImageAction, saveSocialSettings, saveHeroImages } from '../actions';
+import { FileText } from 'lucide-react';
+import { uploadHeroImageAction, saveSocialSettings, saveHeroImages, savePoliciesSettings } from '../actions';
 import type { SiteSettings, HeroImage } from '@/lib/siteSettings';
 
 // ── Inline SVG icons (lucide 1.7.0 doesn't have Instagram/Facebook) ──────────
@@ -57,6 +58,13 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
   const [socialStatus, setSocialStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [socialError, setSocialError] = useState('');
   const [isPendingSocial, startSocialTransition] = useTransition();
+
+  // Policies state
+  const [refundPolicy, setRefundPolicy] = useState(settings.policies.refundPolicy);
+  const [termsOfUse, setTermsOfUse] = useState(settings.policies.termsOfUse);
+  const [policiesStatus, setPoliciesStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [policiesError, setPoliciesError] = useState('');
+  const [isPendingPolicies, startPoliciesTransition] = useTransition();
 
   // ── Hero Actions ────────────────────────────────────────────────────────────
   const handleFileUpload = async (file: File) => {
@@ -144,8 +152,25 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
     });
   }
 
+  // ── Policies submit ─────────────────────────────────────────────────────────
+  function handlePoliciesSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startPoliciesTransition(async () => {
+      const result = await savePoliciesSettings(fd);
+      if (result.success) {
+        setPoliciesStatus('success');
+      } else {
+        setPoliciesError(result.error || 'Error saving policies');
+        setPoliciesStatus('error');
+      }
+      setTimeout(() => setPoliciesStatus('idle'), 3000);
+    });
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* ── Hero Image Card ─────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-[#c3c6d6]/10 overflow-hidden">
         <div className="p-6 border-b border-[#c3c6d6]/10 flex items-center gap-3">
@@ -348,5 +373,60 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
         </div>
       </div>
     </div>
+
+    {/* ── Store Policies Card ──────────────────────────────────────────────── */}
+    <div className="bg-white rounded-xl shadow-sm border border-[#c3c6d6]/10 overflow-hidden mt-8">
+      <div className="p-6 border-b border-[#c3c6d6]/10 flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-green-50 text-green-600"><FileText size={18} /></div>
+        <div>
+          <h2 className="font-serif text-lg font-bold text-[#1b1c1c]">Store Policies</h2>
+          <p className="text-xs text-gray-400">Supports Markdown formatting (e.g., **bold**, - lists, ## headings)</p>
+        </div>
+      </div>
+
+      <div className="p-6">
+        <form onSubmit={handlePoliciesSubmit} className="space-y-6">
+          <div>
+            <label className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1">
+              Refund Policy
+            </label>
+            <textarea
+              name="refundPolicy"
+              value={refundPolicy}
+              onChange={(e) => setRefundPolicy(e.target.value)}
+              rows={12}
+              className="w-full border border-gray-200 rounded-lg p-3 text-sm text-[#1b1c1c] focus:border-[#0051C3] focus:outline-none transition-colors"
+              placeholder="Enter refund policy here..."
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-[0.65rem] font-bold uppercase tracking-widest text-gray-500 mb-1">
+              Terms of Use
+            </label>
+            <textarea
+              name="termsOfUse"
+              value={termsOfUse}
+              onChange={(e) => setTermsOfUse(e.target.value)}
+              rows={12}
+              className="w-full border border-gray-200 rounded-lg p-3 text-sm text-[#1b1c1c] focus:border-[#0051C3] focus:outline-none transition-colors"
+              placeholder="Enter terms of use here..."
+            />
+          </div>
+
+          <StatusBanner status={policiesStatus} message={policiesError} />
+
+          <button
+            type="submit"
+            disabled={isPendingPolicies}
+            className="w-full flex items-center justify-center gap-2 bg-[#1b1c1c] text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#0051C3] transition-colors disabled:opacity-50 max-w-xs"
+          >
+            <Save size={14} />
+            {isPendingPolicies ? 'Saving…' : 'Save Policies'}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
   );
 }
