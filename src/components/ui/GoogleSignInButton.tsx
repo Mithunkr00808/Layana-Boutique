@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { useState, useEffect } from "react";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 
 interface GoogleSignInButtonProps {
@@ -31,20 +31,49 @@ export default function GoogleSignInButton({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    // Check if we just returned from a mobile redirect sign-in
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          onSuccess?.();
+        }
+      })
+      .catch((err) => {
+        const firebaseError = err as { code?: string; message?: string };
+        if (firebaseError.code === "auth/account-exists-with-different-credential") {
+          const msg = "An account already exists with this email using a different sign-in method.";
+          setError(msg);
+          onError?.(msg);
+        } else {
+          const msg = "Sign-in failed after redirect. Please try again.";
+          setError(msg);
+          onError?.(msg);
+        }
+      });
+  }, [onError, onSuccess]);
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError("");
 
     try {
-      // Firebase popup-based Google sign-in
-      // After this resolves, AuthContext's onIdTokenChanged fires automatically
-      // and handles: session cookie creation, cart migration, and user state.
-      // The login/signup page's useEffect then handles redirect when user is set.
-      await signInWithPopup(auth, googleProvider);
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-      // Keep loading state active — the page will redirect once AuthContext
-      // sets the user, which unmounts this component. Don't set isLoading=false.
-      onSuccess?.();
+      if (isMobile) {
+        // Redirect completely leaves the app. No need to clear loading.
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        // Firebase popup-based Google sign-in
+        // After this resolves, AuthContext's onIdTokenChanged fires automatically
+        // and handles: session cookie creation, cart migration, and user state.
+        // The login/signup page's useEffect then handles redirect when user is set.
+        await signInWithPopup(auth, googleProvider);
+
+        // Keep loading state active — the page will redirect once AuthContext
+        // sets the user, which unmounts this component. Don't set isLoading=false.
+        onSuccess?.();
+      }
     } catch (err: unknown) {
       const firebaseError = err as { code?: string; message?: string };
       let message = "Sign-in failed. Please try again.";
@@ -55,8 +84,13 @@ export default function GoogleSignInButton({
           setIsLoading(false);
           return;
         case "auth/popup-blocked":
-          message =
-            "Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.";
+          // Fallback to redirect if popup is blocked on desktop
+          try {
+            await signInWithRedirect(auth, googleProvider);
+            return;
+          } catch (redirectErr) {
+            message = "Pop-up was blocked and redirect failed. Please allow pop-ups for this site.";
+          }
           break;
         case "auth/account-exists-with-different-credential":
           message =
