@@ -32,12 +32,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/admin/login', request.url));
   }
 
-  // If an authenticated session hits admin login, send them to admin dashboard
-  if (isAdminLoginRoute && session) {
-    return NextResponse.redirect(new URL('/admin', request.url));
-  }
-
-  // Admin role is enforced server-side in protected admin layouts/actions.
+  // NOTE: We intentionally do NOT redirect authenticated users away from
+  // /admin/login here. The middleware cannot verify admin claims — only that
+  // a session cookie exists. The server-side admin login page handles the
+  // admin check via getAdminSession() and redirects actual admins to /admin.
 
   return NextResponse.next();
 }
