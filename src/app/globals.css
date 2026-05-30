@@ -30,6 +30,15 @@ body {
   font-family: var(--font-sans), sans-serif;
   /* Smooth scrolling for GSAP/Framer Motion */
   overscroll-behavior-y: none;
+  /* Prevent text-cursor (I-beam) on non-interactive elements */
+  cursor: default;
+}
+
+/* Restore text cursor for actual editable elements */
+input,
+textarea,
+[contenteditable="true"] {
+  cursor: text;
 }
 
 /* Glassmorphism Classes */

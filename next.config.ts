@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const config: NextConfig = {
+  turbopack: {
+    root: import.meta.dirname,
+  },
   experimental: {
     optimizePackageImports: ["lucide-react"],
     serverActions: {

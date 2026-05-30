@@ -2,12 +2,12 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load .env.local explicitly
+// Load .env.local BEFORE importing firebase/admin (which reads env vars at module load)
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-import { adminAuth, adminDb } from '../src/lib/firebase/admin';
-
 async function createAdmin(email: string, password: string, fullName: string) {
+  // Dynamic import so env vars are available when firebase/admin initializes
+  const { adminAuth, adminDb } = await import('../src/lib/firebase/admin');
   try {
     console.log(`Creating/Updating admin account for ${email}...`);
     console.log(`Project ID: ${process.env.FIREBASE_PROJECT_ID}`);
