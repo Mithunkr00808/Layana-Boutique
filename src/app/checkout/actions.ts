@@ -21,7 +21,7 @@ type VerifyResponse =
 
 const createOrderInputSchema = z.object({
   addressId: z.string().trim().min(1).max(128),
-  shippingMethod: z.enum(["standard", "express"]),
+  shippingMethod: z.enum(["standard"]).default("standard"),
 });
 
 const verifyPaymentInputSchema = z.object({
@@ -148,12 +148,11 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
 
 const SHIPPING_COSTS: Record<string, number> = {
   standard: 0,
-  express: 250,
 };
 
 export async function createOrder(
   addressId: string,
-  shippingMethod: "standard" | "express" = "standard"
+  shippingMethod: "standard" = "standard"
 ): Promise<OrderResponse> {
   if (!process.env.FIREBASE_PROJECT_ID) {
     return { error: "Firebase is not configured" };
@@ -213,7 +212,7 @@ export async function createOrder(
   } catch (error) {
     console.error("Failed to create Razorpay order:", error);
     captureTelemetryError(error, "checkout_create_order_failed");
-    return { error: "Failed to create order" };
+    return { error: `Failed to create order: ${error instanceof Error ? error.message : JSON.stringify(error)}` };
   }
 }
 

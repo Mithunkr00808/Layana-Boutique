@@ -34,7 +34,7 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [addingAddress, setAddingAddress] = useState(false);
-  const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
+  const [shippingMethod, setShippingMethod] = useState<"standard">("standard");
   const [newAddress, setNewAddress] = useState<{
     fullName: string;
     phone: string;
@@ -141,7 +141,7 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
   const formatPrice = (value: number) =>
     `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const shippingAmount = shippingMethod === "standard" ? 0 : 250;
+  const shippingAmount = 0;
   const totalWithShipping = subtotal + shippingAmount;
   const totalDisplayWithShipping = formatPrice(totalWithShipping);
 
@@ -376,22 +376,6 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
                   </div>
                 </div>
                 <span className="font-sans font-medium text-sm">Complimentary</span>
-              </label>
-              <label className="group flex items-center justify-between p-5 rounded-lg border border-[var(--color-outline-variant)]/30 hover:border-[var(--color-primary)]/60 transition cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <input
-                    type="radio"
-                    name="shipping"
-                    checked={shippingMethod === "express"}
-                    onChange={() => setShippingMethod("express")}
-                    className="w-5 h-5 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-                  />
-                  <div>
-                    <span className="block font-sans text-base font-semibold">Express Priority</span>
-                    <span className="text-[var(--color-secondary)] text-sm">Next Day Delivery</span>
-                  </div>
-                </div>
-                <span className="font-sans font-medium text-sm">{formatPrice(shippingAmount)}</span>
               </label>
             </div>
           </section>

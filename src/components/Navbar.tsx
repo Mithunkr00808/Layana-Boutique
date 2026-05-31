@@ -9,12 +9,14 @@ import { usePathname } from "next/navigation";
 import { PRODUCT_CATEGORY_OPTIONS, getCategoryHref } from "@/lib/catalog/categories";
 import MiniCart from "./MiniCart";
 import CartDrawer from "./CartDrawer";
+import MobileMenu from "./MobileMenu";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [isCartHovered, setIsCartHovered] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const { user } = useAuth();
   const { itemCount } = useCart();
@@ -46,10 +48,17 @@ export default function Navbar() {
   return (
     <header className={`fixed top-0 w-full z-50 transform-gpu transition duration-500 ${scrolled || !isHome ? 'glass ambient-shadow' : 'bg-transparent'}`}>
       <nav className="flex justify-between items-center px-4 md:px-10 py-4 max-w-[1440px] mx-auto w-full">
-        <div className="flex items-center gap-4 md:gap-14">
+        <div className="flex items-center gap-3 sm:gap-4 md:gap-14">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className={`md:hidden transition-colors duration-500 ${useWhiteText ? 'text-white' : 'text-zinc-900'}`} 
+            aria-label="Menu"
+          >
+            <Menu strokeWidth={1.5} size={20} />
+          </button>
           <Link 
             href="/" 
-            className={`font-serif text-2xl md:text-3xl font-light tracking-tighter uppercase transition-colors duration-500 shrink-0 ${useWhiteText ? 'text-white' : 'text-zinc-900 hover:opacity-70'} ${shadowClass}`}
+            className={`font-serif text-[1.1rem] sm:text-2xl md:text-3xl font-light tracking-tighter uppercase transition-colors duration-500 shrink-0 whitespace-nowrap ${useWhiteText ? 'text-white' : 'text-zinc-900 hover:opacity-70'} ${shadowClass}`}
           >
             Layana Boutique
           </Link>
@@ -66,7 +75,7 @@ export default function Navbar() {
 
           </div>
         </div>
-        <div className="flex items-center gap-4 md:gap-8">
+        <div className="flex items-center gap-3 sm:gap-4 md:gap-8">
           <Link 
             href="/account/wishlist" 
             className={`transform-gpu transition duration-500 active:scale-90 ${useWhiteText ? 'text-white hover:text-white/70' : 'text-zinc-900 hover:opacity-70'} ${shadowClass}`} 
@@ -122,16 +131,10 @@ export default function Navbar() {
               )}
             </div>
           </button>
-
-          <button 
-            className={`md:hidden transition-colors duration-500 ${useWhiteText ? 'text-white' : 'text-zinc-900'}`} 
-            aria-label="Menu"
-          >
-            <Menu strokeWidth={1.5} size={20} />
-          </button>
         </div>
       </nav>
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
     </header>
   );
 }
