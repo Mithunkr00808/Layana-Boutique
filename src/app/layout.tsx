@@ -35,6 +35,9 @@ export const metadata: Metadata = {
     default: "Layana Boutique — Designer Sarees, Kurties & Kids Wear Online",
     template: "%s | Layana Boutique",
   },
+  icons: {
+    icon: "https://res.cloudinary.com/dbecpojqr/image/upload/e_make_transparent:10/v1780214056/layana_boutique/layana_boutique_logo.png",
+  },
   description:
     "Shop luxury designer sarees, premium kurties and ethnic kids wear at Layana Boutique. Handpicked Indian fashion with artisanal craftsmanship. Free shipping across India.",
   keywords: [
