@@ -3,7 +3,9 @@ import { Noto_Serif, Manrope, Geist } from "next/font/google";
 import AppProviders from "@/components/AppProviders";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import FooterWithData from "@/components/FooterWithData";
+import SiteAccessControl from "@/components/SiteAccessControl";
 import { getSiteUrl } from "@/lib/site-url";
+import { getSiteSettings } from "@/lib/siteSettings";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -79,11 +81,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSiteSettings();
+  const isLive = settings.general.isLive;
+
   return (
     <html
       lang="en"
@@ -91,10 +96,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AppProviders>
-          <div className="flex-1 flex flex-col">{children}</div>
-          <ConditionalFooter>
-            <FooterWithData />
-          </ConditionalFooter>
+          <SiteAccessControl isLive={isLive}>
+            <div className="flex-1 flex flex-col">{children}</div>
+            <ConditionalFooter isLive={isLive}>
+              <FooterWithData />
+            </ConditionalFooter>
+          </SiteAccessControl>
         </AppProviders>
       </body>
     </html>
