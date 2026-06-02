@@ -22,6 +22,9 @@ export interface SiteSettings {
     refundPolicy: string;
     termsOfUse: string;
   };
+  general: {
+    isLive: boolean;
+  };
 }
 
 const DEFAULT_HERO_URL =
@@ -113,6 +116,9 @@ We have the right at our sole discretion to remove any content that we feel in o
 We do not assume any liability for any content posted by you or any other 3rd party users of our website. However, any content posted by you using any open communication tools on our website, provided that it doesn't violate or infringe on any 3rd party copyrights or trademarks, becomes the property of Layana Boutique, and as such, gives us a perpetual, irrevocable, worldwide, royalty-free, exclusive license to reproduce, modify, adapt, translate, publish, publicly display, and/or distribute as we see fit. This only refers and applies to content posted via open communication tools as described, and does not refer to information that is provided as part of the registration process, necessary in order to use our resources. All information provided as part of our registration process is covered by our privacy policy.
 
 You agree to indemnify and hold harmless Layana Boutique and its parent company and affiliates, and their directors, officers, managers, employees, donors, agents, and licensors, from and against all losses, expenses, damages, and costs, including reasonable attorney's fees, resulting from any violation of this User Agreement or the failure to fulfill any obligations relating to your account incurred by you or any other person using your account. We reserve the right to take over the exclusive defense of any claim for which we are entitled to indemnification under this User Agreement. In such event, you shall provide us with such cooperation as is reasonably requested by us.`,
+  },
+  general: {
+    isLive: false,
   }
 };
 
@@ -120,10 +126,11 @@ export async function getSiteSettings(): Promise<SiteSettings> {
   if (!process.env.FIREBASE_PROJECT_ID) return DEFAULT_SETTINGS;
 
   try {
-    const [heroDoc, socialDoc, policiesDoc] = await Promise.all([
+    const [heroDoc, socialDoc, policiesDoc, generalDoc] = await Promise.all([
       adminDb.collection('siteSettings').doc('hero').get(),
       adminDb.collection('siteSettings').doc('social').get(),
       adminDb.collection('siteSettings').doc('policies').get(),
+      adminDb.collection('siteSettings').doc('general').get(),
     ]);
 
     const h = heroDoc.exists
@@ -161,6 +168,9 @@ export async function getSiteSettings(): Promise<SiteSettings> {
       policies: {
         refundPolicy: p.refundPolicy || DEFAULT_SETTINGS.policies.refundPolicy,
         termsOfUse: p.termsOfUse || DEFAULT_SETTINGS.policies.termsOfUse,
+      },
+      general: {
+        isLive: generalDoc.exists ? generalDoc.data()?.isLive ?? false : false,
       }
     };
   } catch (err) {

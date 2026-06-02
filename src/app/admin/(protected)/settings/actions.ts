@@ -119,3 +119,28 @@ export async function savePoliciesSettings(formData: FormData) {
     return { success: false, error: 'Failed to save policies.' };
   }
 }
+
+export async function saveGeneralSettings(isLive: boolean) {
+  const adminSession = await assertAdminSession();
+  if (!process.env.FIREBASE_PROJECT_ID) {
+    return { success: false, error: 'Firebase not configured.' };
+  }
+
+  try {
+    await adminDb.collection('siteSettings').doc('general').set({ isLive }, { merge: true });
+    revalidatePath('/');
+    updateTag('settings');
+    await logAdminAuditEvent({
+      actorUid: adminSession.uid,
+      actorEmail: adminSession.email,
+      action: 'settings.general.update',
+      resourceType: 'siteSettings',
+      resourceId: 'general',
+      metadata: { isLive },
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('saveGeneralSettings error:', err);
+    return { success: false, error: 'Failed to save general settings.' };
+  }
+}

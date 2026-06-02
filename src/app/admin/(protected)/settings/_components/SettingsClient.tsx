@@ -3,8 +3,8 @@
 import Image from 'next/image';
 import { useRef, useState, useTransition, useCallback } from 'react';
 import { ImageIcon, Mail, CheckCircle2, AlertCircle, Save, Upload, X, Trash2 } from 'lucide-react';
-import { FileText } from 'lucide-react';
-import { uploadHeroImageAction, saveSocialSettings, saveHeroImages, savePoliciesSettings } from '../actions';
+import { FileText, Globe } from 'lucide-react';
+import { uploadHeroImageAction, saveSocialSettings, saveHeroImages, savePoliciesSettings, saveGeneralSettings } from '../actions';
 import type { SiteSettings, HeroImage } from '@/lib/siteSettings';
 
 // ── Inline SVG icons (lucide 1.7.0 doesn't have Instagram/Facebook) ──────────
@@ -42,6 +42,12 @@ function StatusBanner({ status, message }: { status: 'idle' | 'success' | 'error
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SettingsClient({ settings }: { settings: SiteSettings }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // General state
+  const [isLive, setIsLive] = useState(settings.general?.isLive ?? false);
+  const [generalStatus, setGeneralStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [generalError, setGeneralError] = useState('');
+  const [isPendingGeneral, startGeneralTransition] = useTransition();
 
   // Hero state
   const [heroImages, setHeroImages] = useState<HeroImage[]>(settings.hero.images || []);
@@ -168,8 +174,73 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
     });
   }
 
+  // ── General toggle ──────────────────────────────────────────────────────────
+  function handleGeneralSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    startGeneralTransition(async () => {
+      const result = await saveGeneralSettings(isLive);
+      if (result.success) {
+        setGeneralStatus('success');
+      } else {
+        setGeneralError(result.error || 'Error saving general settings');
+        setGeneralStatus('error');
+      }
+      setTimeout(() => setGeneralStatus('idle'), 3000);
+    });
+  }
+
   return (
     <div className="space-y-8">
+      {/* ── General Settings Card ───────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#c3c6d6]/10 overflow-hidden">
+        <div className="p-6 border-b border-[#c3c6d6]/10 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600"><Globe size={18} /></div>
+          <div>
+            <h2 className="font-serif text-lg font-bold text-[#1b1c1c]">General Settings</h2>
+            <p className="text-xs text-gray-400">Control global site visibility</p>
+          </div>
+        </div>
+        <div className="p-6">
+          <form onSubmit={handleGeneralSubmit} className="space-y-6 max-w-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-bold text-[#1b1c1c]">Make Site Live</label>
+                <p className="text-xs text-gray-500 mt-1">
+                  When enabled, the real homepage is visible to visitors. When disabled, visitors see a "Coming Soon" page.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isLive}
+                onClick={() => setIsLive(!isLive)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#0051C3] focus:ring-offset-2 ${
+                  isLive ? 'bg-green-500' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    isLive ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <StatusBanner status={generalStatus} message={generalError} />
+
+            <button
+              type="submit"
+              disabled={isPendingGeneral}
+              className="w-full flex items-center justify-center gap-2 bg-[#1b1c1c] text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-[#0051C3] transition-colors disabled:opacity-50"
+            >
+              <Save size={14} />
+              {isPendingGeneral ? 'Saving…' : 'Save General Settings'}
+            </button>
+          </form>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* ── Hero Image Card ─────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-[#c3c6d6]/10 overflow-hidden">
