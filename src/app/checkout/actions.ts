@@ -212,7 +212,7 @@ export async function createOrder(
   } catch (error) {
     console.error("Failed to create Razorpay order:", error);
     captureTelemetryError(error, "checkout_create_order_failed");
-    return { error: `Failed to create order: ${error instanceof Error ? error.message : JSON.stringify(error)}` };
+    return { error: "Failed to create order. Please try again later." };
   }
 }
 
@@ -232,6 +232,12 @@ export async function verifyPayment(data: {
       return { success: false, error: "Invalid payment payload" };
     }
     const input = parsedInput.data;
+
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      console.error("RAZORPAY_KEY_SECRET is not configured");
+      captureTelemetryError(new Error("Missing RAZORPAY_KEY_SECRET"), "checkout_missing_key_secret");
+      return { success: false, error: "Payment verification unavailable" };
+    }
 
     const uid = await getSessionUid();
     if (!uid) return { success: false, error: "Unauthenticated" };

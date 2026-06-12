@@ -36,7 +36,8 @@ function LoginPageContent() {
   const redirectTarget = useMemo(() => {
     const paramTarget =
       searchParams.get("returnUrl") || searchParams.get("callbackUrl");
-    if (paramTarget) return paramTarget;
+    // Only allow relative paths to prevent open redirect attacks
+    if (paramTarget && paramTarget.startsWith("/") && !paramTarget.startsWith("//")) return paramTarget;
     if (typeof window !== "undefined") {
       try {
         const ref = new URL(document.referrer);

@@ -8,14 +8,16 @@ import FadeIn from "@/components/FadeIn";
 import { getNewArrivals, getJournalArticles } from "@/lib/data";
 import { getSiteSettings } from "@/lib/siteSettings";
 import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/jsonld";
+import { getAdminSession } from "@/lib/auth/admin-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const settings = await getSiteSettings();
   const isLive = settings.general.isLive;
+  const adminSession = await getAdminSession();
 
-  if (!isLive) {
+  if (!isLive && !adminSession) {
     return (
       <div className="flex min-h-screen flex-col bg-[var(--color-surface)]">
         <OrganizationJsonLd />

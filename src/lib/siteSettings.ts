@@ -21,6 +21,7 @@ export interface SiteSettings {
   policies: {
     refundPolicy: string;
     termsOfUse: string;
+    privacyPolicy: string;
   };
   general: {
     isLive: boolean;
@@ -116,6 +117,45 @@ We have the right at our sole discretion to remove any content that we feel in o
 We do not assume any liability for any content posted by you or any other 3rd party users of our website. However, any content posted by you using any open communication tools on our website, provided that it doesn't violate or infringe on any 3rd party copyrights or trademarks, becomes the property of Layana Boutique, and as such, gives us a perpetual, irrevocable, worldwide, royalty-free, exclusive license to reproduce, modify, adapt, translate, publish, publicly display, and/or distribute as we see fit. This only refers and applies to content posted via open communication tools as described, and does not refer to information that is provided as part of the registration process, necessary in order to use our resources. All information provided as part of our registration process is covered by our privacy policy.
 
 You agree to indemnify and hold harmless Layana Boutique and its parent company and affiliates, and their directors, officers, managers, employees, donors, agents, and licensors, from and against all losses, expenses, damages, and costs, including reasonable attorney's fees, resulting from any violation of this User Agreement or the failure to fulfill any obligations relating to your account incurred by you or any other person using your account. We reserve the right to take over the exclusive defense of any claim for which we are entitled to indemnification under this User Agreement. In such event, you shall provide us with such cooperation as is reasonably requested by us.`,
+    privacyPolicy: `## Introduction
+Welcome to Layana Boutique. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you as to how we look after your personal data when you visit our website and tell you about your privacy rights.
+
+## 1. Information We Collect
+We collect personal information that you provide to us when creating an account, placing an order, or contacting us. This may include:
+- Name, email address, phone number, and shipping/billing address.
+- Payment information (processed securely through our payment partner, Razorpay).
+- Account credentials for our platform.
+
+## 2. How We Use Your Information
+We use your information to:
+- Process and fulfill your orders.
+- Communicate with you regarding your order status, updates, and promotional offers.
+- Improve our website, products, and customer service.
+- Detect and prevent fraudulent transactions.
+
+## 3. Third-Party Services
+We may share your data with trusted third-party service providers to facilitate our services:
+- **Payment Processing:** We use Razorpay to process payments securely. We do not store your full credit card or UPI details on our servers.
+- **Communications:** We use Resend to send you transactional and marketing emails.
+- **Analytics & Performance:** We use Sentry to monitor website performance and track errors to improve your experience.
+- **Database & Authentication:** We use Firebase for secure user authentication and database management.
+
+## 4. Data Security
+We implement robust security measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet or electronic storage is 100% secure.
+
+## 5. Cookies and Tracking
+We use cookies to enhance your browsing experience, remember your preferences, and analyze site traffic. You can choose to disable cookies through your browser settings, but this may affect site functionality.
+
+## 6. Your Rights
+You have the right to access, update, or delete your personal information. If you wish to exercise these rights, please contact us.
+
+## 7. Changes to This Privacy Policy
+We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated effective date.
+
+## 8. Contact Us
+If you have any questions or concerns about this Privacy Policy, please contact us at:
+- **Email:** layanabydhanya@gmail.com
+- **Website:** layanaboutique.com`,
   },
   general: {
     isLive: false,
@@ -168,6 +208,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
       policies: {
         refundPolicy: p.refundPolicy || DEFAULT_SETTINGS.policies.refundPolicy,
         termsOfUse: p.termsOfUse || DEFAULT_SETTINGS.policies.termsOfUse,
+        privacyPolicy: p.privacyPolicy || DEFAULT_SETTINGS.policies.privacyPolicy,
       },
       general: {
         isLive: generalDoc.exists ? generalDoc.data()?.isLive ?? false : false,

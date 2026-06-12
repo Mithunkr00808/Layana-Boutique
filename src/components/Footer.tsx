@@ -75,6 +75,9 @@ export default function Footer({ social }: FooterProps) {
           <Link href="/terms-of-use" className="font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 underline-offset-4 hover:underline transition-all">
             Terms of Use
           </Link>
+          <Link href="/privacy-policy" className="font-sans text-xs tracking-widest uppercase text-zinc-500 hover:text-zinc-900 underline-offset-4 hover:underline transition-all">
+            Privacy Policy
+          </Link>
         </div>
 
         <div className="flex flex-col gap-4">

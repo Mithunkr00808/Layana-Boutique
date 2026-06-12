@@ -19,7 +19,12 @@ export async function getGuestId(): Promise<string> {
   const existing = cookieStore.get("guestId")?.value;
   if (existing) return existing;
   const id = crypto.randomUUID();
-  cookieStore.set("guestId", id, { path: "/", httpOnly: true });
+  cookieStore.set("guestId", id, {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
   return id;
 }
 
@@ -40,6 +45,8 @@ async function setGuestCartCookie(items: GuestCartItem[]) {
     path: "/",
     httpOnly: true,
     maxAge: 60 * 60 * 24 * 30, // 30 days
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
   });
 }
 

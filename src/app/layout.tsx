@@ -6,6 +6,7 @@ import FooterWithData from "@/components/FooterWithData";
 import SiteAccessControl from "@/components/SiteAccessControl";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSiteSettings } from "@/lib/siteSettings";
+import { getAdminSession } from "@/lib/auth/admin-session";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +89,9 @@ export default async function RootLayout({
 }>) {
   const settings = await getSiteSettings();
   const isLive = settings.general.isLive;
+  const adminSession = await getAdminSession();
+  const isAdmin = !!adminSession;
+  const effectiveIsLive = isLive || isAdmin;
 
   return (
     <html
@@ -96,9 +100,9 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AppProviders>
-          <SiteAccessControl isLive={isLive}>
+          <SiteAccessControl isLive={effectiveIsLive}>
             <div className="flex-1 flex flex-col">{children}</div>
-            <ConditionalFooter isLive={isLive}>
+            <ConditionalFooter isLive={effectiveIsLive}>
               <FooterWithData />
             </ConditionalFooter>
           </SiteAccessControl>

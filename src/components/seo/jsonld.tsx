@@ -11,7 +11,7 @@ export function OrganizationJsonLd() {
     "@type": "Organization",
     name: "Layana Boutique",
     url: BASE_URL,
-    logo: `${BASE_URL}/opengraph-image`,
+    logo: "https://res.cloudinary.com/dbecpojqr/image/upload/e_make_transparent:10/v1780214056/layana_boutique/layana_boutique_logo.png",
     description:
       "Premium Indian ethnic wear boutique specializing in designer sarees, kurties, and kids wear.",
     contactPoint: {
