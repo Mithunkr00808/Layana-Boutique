@@ -126,7 +126,15 @@ export default function ProductGrid({
       {/* Product Grid */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-20 mb-40">
         {products.map((product) => (
-          <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer block">
+          <Link 
+            href={`/product/${product.id}`} 
+            key={product.id} 
+            className="group cursor-pointer block"
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+              document.documentElement.scrollTop = 0;
+            }}
+          >
             <div className="relative overflow-hidden rounded-[20px] bg-[var(--color-surface-low)] aspect-[3/4] mb-6">
               <Image
                 src={product.image}

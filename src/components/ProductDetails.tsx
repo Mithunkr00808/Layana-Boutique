@@ -37,29 +37,28 @@ export default function ProductDetails(props: ProductDetailsProps) {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string>("");
 
-  // Local quantity — this is the count the user sees and adjusts BEFORE confirming
-  const [localQty, setLocalQty] = useState<number>(0);
-  // Whether the item exists in the cart (synced from server on mount)
-  const [cartSynced, setCartSynced] = useState(false);
+  const { addItem, updateQuantity, removeItem, items } = useCart();
 
   const effectiveSize = props.hasSizes === false ? "One Size" : (selectedSize || "");
+  const docId = `${props.id}-${effectiveSize}`;
+  const cartItem = items.find((i) => i.id === docId);
+  const cartQty = cartItem?.quantity || 0;
 
-  // Fetch existing cart quantity on mount / size change (non-blocking)
+  // Local quantity — this is the count the user sees and adjusts BEFORE confirming
+  const [localQty, setLocalQty] = useState<number>(cartQty > 0 ? cartQty : 1);
+  // Whether the item exists in the cart
+  const [cartSynced, setCartSynced] = useState(cartQty > 0);
+
+  // Sync localQty with cartQty when cartQty changes from the context
   useEffect(() => {
-    let cancelled = false;
-    getCartItemQuantity(props.id, effectiveSize).then((qty) => {
-      if (!cancelled) {
-        if (qty > 0) {
-          setLocalQty(qty);
-          setCartSynced(true);
-        } else {
-          setLocalQty(0);
-          setCartSynced(false);
-        }
-      }
-    });
-    return () => { cancelled = true; };
-  }, [props.id, effectiveSize]);
+    if (cartQty > 0) {
+      setLocalQty(cartQty);
+      setCartSynced(true);
+    } else {
+      setLocalQty(1);
+      setCartSynced(false);
+    }
+  }, [cartQty]);
 
   const numericPrice = useMemo(() => {
     const numeric = parseFloat((props.price || "").replace(/[^\d.]/g, ""));
@@ -81,41 +80,48 @@ export default function ProductDetails(props: ProductDetailsProps) {
     [numericEffectivePrice]
   );
 
-  const { addItem } = useCart();
-
   const handleAddToBag = () => {
-    const nextQty = localQty + 1;
-    setLocalQty(nextQty);
+    const qtyToAdd = localQty;
     setMessage("");
-    // Optimistic: mark as synced immediately
-    setCartSynced(true);
 
     startTransition(async () => {
       try {
-        await addItem({
-          productId: props.id,
-          name: props.name,
-          variant: props.categoryPath,
-          size: effectiveSize,
-          price: numericEffectivePrice,
-          priceDisplay,
-          image: props.primaryImage || "",
-          alt: props.name,
-          quantity: nextQty,
-          originalPrice: props.discountPrice ? numericPrice : undefined,
-          originalPriceDisplay: props.discountPrice ? props.price : undefined,
-        });
-        setMessage(nextQty > 0 ? "Bag updated" : "Removed from bag");
+        if (cartSynced) {
+          if (qtyToAdd === 0) {
+            await removeItem(docId);
+            setMessage("Removed from bag");
+          } else {
+            await updateQuantity(docId, qtyToAdd);
+            setMessage("Bag updated");
+          }
+        } else {
+          if (qtyToAdd > 0) {
+            await addItem({
+              productId: props.id,
+              name: props.name,
+              variant: props.categoryPath,
+              size: effectiveSize,
+              price: numericEffectivePrice,
+              priceDisplay,
+              image: props.primaryImage || "",
+              alt: props.name,
+              quantity: qtyToAdd,
+              originalPrice: props.discountPrice ? numericPrice : undefined,
+              originalPriceDisplay: props.discountPrice ? props.price : undefined,
+            });
+            setMessage("Added to bag");
+          }
+        }
         setTimeout(() => setMessage(""), 2000);
       } catch (err) {
         setMessage("Could not update bag. Please try again.");
-        setCartSynced(false);
       }
     });
   };
 
   const decrementQty = () => {
-    setLocalQty((prev) => (prev > 0 ? prev - 1 : 0));
+    const minQty = cartSynced ? 0 : 1;
+    setLocalQty((prev) => (prev > minQty ? prev - 1 : minQty));
   };
 
   const incrementQty = () => {

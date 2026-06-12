@@ -5,8 +5,10 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { PRODUCT_CATEGORY_OPTIONS, getCategoryHref } from "@/lib/catalog/categories";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { user, logout } = useAuth();
   // Prevent scroll when menu is open
   useEffect(() => {
     if (isOpen) {
@@ -68,20 +70,50 @@ export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClo
               </div>
 
               <div className="border-t border-zinc-100 mt-8 pt-8 flex flex-col gap-6">
-                <Link
-                  href="/account"
-                  onClick={onClose}
-                  className="font-sans tracking-[0.2em] text-sm uppercase font-semibold antialiased text-zinc-700 hover:text-zinc-900"
-                >
-                  Account
-                </Link>
-                <Link
-                  href="/account/wishlist"
-                  onClick={onClose}
-                  className="font-sans tracking-[0.2em] text-sm uppercase font-semibold antialiased text-zinc-700 hover:text-zinc-900"
-                >
-                  Wishlist
-                </Link>
+                {user ? (
+                  <>
+                    <Link
+                      href="/account"
+                      onClick={onClose}
+                      className="font-sans tracking-[0.2em] text-sm uppercase font-semibold antialiased text-zinc-700 hover:text-zinc-900"
+                    >
+                      Account
+                    </Link>
+                    <Link
+                      href="/account/wishlist"
+                      onClick={onClose}
+                      className="font-sans tracking-[0.2em] text-sm uppercase font-semibold antialiased text-zinc-700 hover:text-zinc-900"
+                    >
+                      Wishlist
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        onClose();
+                      }}
+                      className="text-left font-sans tracking-[0.2em] text-sm uppercase font-semibold antialiased text-zinc-700 hover:text-zinc-900"
+                    >
+                      Log Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={onClose}
+                      className="font-sans tracking-[0.2em] text-sm uppercase font-semibold antialiased text-zinc-700 hover:text-zinc-900"
+                    >
+                      Log In
+                    </Link>
+                    <Link
+                      href="/account/wishlist"
+                      onClick={onClose}
+                      className="font-sans tracking-[0.2em] text-sm uppercase font-semibold antialiased text-zinc-700 hover:text-zinc-900"
+                    >
+                      Wishlist
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
