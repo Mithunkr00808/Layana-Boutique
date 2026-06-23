@@ -5,7 +5,7 @@ import Hero from "@/components/Hero";
 import NewArrivals from "@/components/NewArrivals";
 import JournalPreview from "@/components/JournalPreview";
 import FadeIn from "@/components/FadeIn";
-import { getNewArrivals, getJournalArticles } from "@/lib/data";
+import { getNewArrivals, getJournalArticles, getReadyToWearProducts } from "@/lib/data";
 import { getSiteSettings } from "@/lib/siteSettings";
 import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/jsonld";
 import { getAdminSession } from "@/lib/auth/admin-session";
@@ -64,10 +64,12 @@ export default async function Home() {
     );
   }
 
-  const [newArrivals, articles] = await Promise.all([
+  const [newArrivals, articles, kurtiesRaw] = await Promise.all([
     getNewArrivals(),
-    getJournalArticles()
+    getJournalArticles(),
+    getReadyToWearProducts({ category: "kurties" })
   ]);
+  const kurties = kurtiesRaw.slice(0, 3);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-surface)]">
@@ -81,6 +83,16 @@ export default async function Home() {
         {newArrivals.length > 0 ? (
           <FadeIn delay={0.2}>
             <NewArrivals products={newArrivals} />
+          </FadeIn>
+        ) : null}
+
+        {kurties.length > 0 ? (
+          <FadeIn delay={0.3}>
+            <NewArrivals 
+              products={kurties} 
+              title="Featured Kurties" 
+              link="/collections/kurties" 
+            />
           </FadeIn>
         ) : null}
 

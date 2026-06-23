@@ -18,7 +18,15 @@ export interface ProductSummary {
   isLimited?: boolean;
 }
 
-export default function NewArrivals({ products }: { products: ProductSummary[] }) {
+export default function NewArrivals({ 
+  products,
+  title = "Latest Arrivals",
+  link = SHOP_CATALOG_PATH
+}: { 
+  products: ProductSummary[];
+  title?: string;
+  link?: string;
+}) {
   if (products.length === 0) {
     return null;
   }
@@ -27,10 +35,10 @@ export default function NewArrivals({ products }: { products: ProductSummary[] }
     <section className="py-24 bg-[var(--color-surface)] max-w-[1440px] mx-auto px-10">
       <div className="flex flex-col md:flex-row justify-between items-baseline mb-16 gap-4">
         <h2 className="font-serif text-3xl md:text-4xl text-[var(--color-on-surface)] font-light">
-          Latest Arrivals
+          {title}
         </h2>
         <Link
-          href={SHOP_CATALOG_PATH}
+          href={link}
           className="font-sans text-xs tracking-[0.2em] uppercase text-[var(--color-secondary)] hover:text-[var(--color-on-surface)] transition-colors border-b border-[var(--color-outline-variant)]/30 pb-1"
         >
           View All Pieces
