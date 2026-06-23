@@ -1,5 +1,5 @@
 import { adminDb } from "@/lib/firebase/admin";
-import { getResendClient, SENDER_EMAIL } from "./client";
+import { getResendClient, SENDER_EMAIL, ADMIN_EMAIL } from "./client";
 import { captureTelemetryError } from "@/lib/telemetry";
 import { OrderConfirmationEmail } from "./templates/OrderConfirmationEmail";
 import { OrderStatusEmail } from "./templates/OrderStatusEmail";
@@ -41,6 +41,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
     const { data, error } = await resend.emails.send({
       from: SENDER_EMAIL,
       to: email,
+      bcc: ADMIN_EMAIL,
       subject: `Order Confirmed: #${orderId.slice(-6).toUpperCase()}`,
       react: OrderConfirmationEmail({
         orderId,
