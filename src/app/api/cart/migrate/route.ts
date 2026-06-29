@@ -8,6 +8,7 @@ import {
   purgeExpiredRateLimitBuckets,
   rateLimitResponse,
 } from "@/lib/security/rate-limit";
+import { resolveProductPrice } from "@/lib/priceUtils";
 
 type GuestCartItem = {
   id: string;
@@ -84,12 +85,29 @@ export async function POST(request: NextRequest) {
           const productSnap = productSnaps[i];
           if (productSnap.exists) {
             const data = productSnap.data()!;
-            const priceStr = data.price
-              ? `₹${parseFloat(data.price.replace(/[^\d.]/g, "")).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })}`
-              : "₹0.00";
-            const rawPrice = data.price ? parseFloat(data.price.replace(/[^\d.]/g, "")) : 0;
+            
+            // Note: In transactions, we generally avoid async calls inside the txn block.
+            // Since we already fetched productSnap via txn, we'll recreate the logic
+            // of extractPriceFromDoc here directly.
+            // We'll import parsePriceToNumber and formatINR for this inline usage.
+            const { parsePriceToNumber, formatINR } = await import("@/lib/priceUtils");
+            const basePrice = parsePriceToNumber(data.rawPrice || data.price);
+            const discountPrice = parsePriceToNumber(data.discountPrice);
+            
+            let finalPrice = basePrice;
+            let displayPrice = formatINR(basePrice);
+            let rawOrigPrice: number | null = null;
+            let displayOrigPrice: string | null = null;
+
+            if (discountPrice > 0 && basePrice > 0 && discountPrice < basePrice) {
+              finalPrice = discountPrice;
+              displayPrice = formatINR(discountPrice);
+              rawOrigPrice = basePrice;
+              displayOrigPrice = formatINR(basePrice);
+            } else if (discountPrice > 0 && basePrice <= 0) {
+              finalPrice = discountPrice;
+              displayPrice = formatINR(discountPrice);
+            }
 
             txn.set(targetRef, {
               id: item.id,
@@ -98,12 +116,12 @@ export async function POST(request: NextRequest) {
               variant: "",
               size: item.size || "",
               quantity: newQty,
-              price: priceStr,
-              rawPrice: rawPrice,
+              price: displayPrice,
+              rawPrice: finalPrice,
               image: data.image || "",
               alt: data.alt || data.name || "",
-              originalPrice: data.discountPrice ? data.price : null,
-              rawOriginalPrice: data.discountPrice ? parseFloat(data.price.replace(/[^\d.]/g, "")) : null,
+              originalPrice: displayOrigPrice,
+              rawOriginalPrice: rawOrigPrice,
             });
           }
         }
