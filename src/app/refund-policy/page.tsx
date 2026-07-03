@@ -6,6 +6,9 @@ import remarkGfm from "remark-gfm";
 export const metadata: Metadata = {
   title: "Refund Policy | Layana Boutique",
   description: "Read our refund, cancellation, and return policies at Layana Boutique.",
+  alternates: {
+    canonical: "/refund-policy",
+  },
 };
 
 export default async function RefundPolicyPage() {

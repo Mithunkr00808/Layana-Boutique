@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title,
     description,
     openGraph: {
-      type: "website",
+      type: "article",
       title: `${product.name} | Layana Boutique`,
       description,
       url: `${BASE_URL}/product/${id}`,
