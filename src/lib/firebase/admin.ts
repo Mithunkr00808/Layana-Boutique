@@ -8,19 +8,20 @@ const adminStorageBucket =
   process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
 if (!admin.apps.length) {
-  const credential = process.env.FIREBASE_PRIVATE_KEY
-    ? admin.credential.cert({
-        projectId: projectId,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      })
-    : undefined;
-
-  admin.initializeApp({
-    credential,
+  const options: admin.AppOptions = {
     projectId,
     storageBucket: adminStorageBucket,
-  });
+  };
+
+  if (process.env.FIREBASE_PRIVATE_KEY) {
+    options.credential = admin.credential.cert({
+      projectId: projectId,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    });
+  }
+
+  admin.initializeApp(options);
 }
 
 export const adminDb = admin.firestore();
