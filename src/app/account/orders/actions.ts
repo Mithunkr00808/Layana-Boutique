@@ -43,8 +43,10 @@ export async function cancelUserOrder(
     if (paymentId) {
       try {
         const rzp = getRazorpay();
-        // amount is passed in currency subunits (paise for INR). We pass it fully exactly as it was charged.
-        const refundResponse = await rzp.payments.refund(paymentId, { amount: order.amount });
+        // Issue a full refund by omitting the amount parameter.
+        // This ensures we refund the exact captured amount, avoiding
+        // mismatches from partial captures or Razorpay-side offers.
+        const refundResponse = await (rzp.payments.refund as any)(paymentId, {});
         refundId = refundResponse.id;
       } catch (rzpError: any) {
         console.error("Razorpay refund failed:", rzpError);

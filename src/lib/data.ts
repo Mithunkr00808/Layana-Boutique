@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { cookies } from 'next/headers';
 import { adminDb } from './firebase/admin';
 import { buildCloudinaryVideoPosterUrl } from './cloudinary';
+import { resolveProductPrice, formatINR } from './priceUtils';
 import { getSessionUid } from './auth/session-user';
 import {
   DEFAULT_PRODUCT_CATEGORY,
@@ -167,13 +168,16 @@ function extractTimestampMillis(value: unknown): number {
 }
 
 function formatIndianPrice(price: unknown): string {
+  if (typeof price === 'number') {
+    return formatINR(price);
+  }
   if (!price || typeof price !== 'string') return '₹0.00';
   
   const numeric = parseFloat(price.replace(/[^\d.]/g, ""));
   if (isNaN(numeric)) {
     return price.replace('$', '₹');
   }
-  return `₹${numeric.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return formatINR(numeric);
 }
 
 function mapProductDoc(doc: DocumentSnapshot): Product {
@@ -430,7 +434,30 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
 
     if (snapshot.empty) return [];
 
-    return snapshot.docs.map(mapCartDoc);
+    // Hydrate each cart item's price from the products collection so that
+    // the displayed price always matches the current listing price.
+    const hydratedItems = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const cartData = mapCartDoc(doc);
+        const productId = cartData.productId || cartData.id.replace(/-[^-]+$/, '');
+
+        const resolved = await resolveProductPrice(productId);
+        if (!resolved) {
+          // Product no longer exists or has no valid price — exclude from cart
+          return null;
+        }
+
+        return {
+          ...cartData,
+          rawPrice: resolved.rawPrice,
+          price: resolved.displayPrice,
+          rawOriginalPrice: resolved.rawOriginalPrice,
+          originalPrice: resolved.displayOriginalPrice,
+        } as CartItem;
+      })
+    );
+
+    return hydratedItems.filter((item): item is CartItem => item !== null);
   } catch (error) {
     console.error('Failed to fetch cart items for user from Firebase:', error);
     return [];
@@ -485,28 +512,30 @@ export async function getCartItemsForUser(): Promise<CartItem[]> {
 
     if (!Array.isArray(items) || items.length === 0) return [];
 
-    // Hydrate cart item prices and metadata directly from products collection for security
+    // Hydrate cart item prices and metadata directly from products collection for security.
+    // Uses resolveProductPrice to correctly handle discountPrice and numeric prices.
     const hydratedPromises = items.map(async (item: any) => {
+      const resolved = await resolveProductPrice(item.productId);
+      if (!resolved) return null;
+
+      // We still need the product doc for name, image, alt metadata
       const productRef = adminDb.collection('products').doc(item.productId);
       const snap = await productRef.get();
-      if (!snap.exists) return null;
-
-      const data = snap.data();
-      if (!data) return null;
-      
-      const rawPrice = data.price && typeof data.price === "string" ? parseFloat(data.price.replace(/[^\d.]/g, "")) : 0;
+      const data = snap.exists ? snap.data() : null;
 
       return {
         id: item.id || `${item.productId}-${item.size || "onesize"}`,
         productId: item.productId,
-        name: data.name || "Unknown Item",
+        name: data?.name || "Unknown Item",
         variant: "",
         size: item.size || "",
         quantity: item.quantity,
-        price: formatIndianPrice(data.price),
-        rawPrice: rawPrice,
-        image: data.image || "",
-        alt: data.alt || data.name || "",
+        price: resolved.displayPrice,
+        rawPrice: resolved.rawPrice,
+        image: data?.image || "",
+        alt: data?.alt || data?.name || "",
+        originalPrice: resolved.displayOriginalPrice,
+        rawOriginalPrice: resolved.rawOriginalPrice,
       } as CartItem;
     });
 

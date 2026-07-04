@@ -6,6 +6,9 @@ import remarkGfm from "remark-gfm";
 export const metadata: Metadata = {
   title: "Privacy Policy | Layana Boutique",
   description: "Read the Privacy Policy for Layana Boutique (Panchali Vastra).",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
 };
 
 export default async function PrivacyPolicyPage() {

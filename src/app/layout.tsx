@@ -56,6 +56,9 @@ export const metadata: Metadata = {
     "layana boutique",
   ],
   robots: { index: true, follow: true },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     locale: "en_IN",

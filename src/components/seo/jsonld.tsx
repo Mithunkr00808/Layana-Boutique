@@ -63,10 +63,22 @@ interface ProductJsonLdProps {
 }
 
 export function ProductJsonLd({ product, productId }: ProductJsonLdProps) {
-  const price = parseFloat((product.price || "0").replace(/[^0-9.]/g, ""));
+  const basePrice = parseFloat((product.price || "0").replace(/[^0-9.]/g, ""));
+  const discountPrice = product.discountPrice
+    ? parseFloat((product.discountPrice || "0").replace(/[^0-9.]/g, ""))
+    : 0;
+
+  const hasDiscount = discountPrice > 0 && basePrice > 0 && discountPrice < basePrice;
+  const effectivePrice = hasDiscount ? discountPrice : basePrice;
+
   const image = product.images?.[0]?.src || `${BASE_URL}/opengraph-image`;
 
-  const schema = {
+  const availability =
+    product.quantity > 0
+      ? "https://schema.org/InStock"
+      : "https://schema.org/OutOfStock";
+
+  const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
@@ -76,13 +88,14 @@ export function ProductJsonLd({ product, productId }: ProductJsonLdProps) {
       "@type": "Brand",
       name: "Layana Boutique",
     },
-    sku: productId,
+    sku: product.sku || productId,
     url: `${BASE_URL}/product/${productId}`,
     offers: {
       "@type": "Offer",
-      price: price.toFixed(2),
+      price: effectivePrice.toFixed(2),
       priceCurrency: "INR",
-      availability: "https://schema.org/InStock",
+      availability,
+      itemCondition: "https://schema.org/NewCondition",
       url: `${BASE_URL}/product/${productId}`,
       seller: {
         "@type": "Organization",

@@ -16,10 +16,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: `${BASE_URL}/collections/sarees`,
+      url: `${BASE_URL}/privacy-policy`,
       lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/refund-policy`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/terms-of-use`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.3,
     },
   ];
 

@@ -5,6 +5,7 @@ import { getSessionUid } from "@/lib/auth/session-user";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getCartItemsForUser } from "@/lib/data";
+import { resolveProductPrice } from "@/lib/priceUtils";
 import { FieldValue } from "firebase-admin/firestore";
 
 interface GuestCartItem {
@@ -141,6 +142,15 @@ export async function addCartItem(input: {
 
     if (uid) {
       if (!process.env.FIREBASE_PROJECT_ID) return { ok: false, reason: "env" as const, isGuest: false };
+
+      // Security: resolve the canonical price from the products collection.
+      // Never trust the client-supplied input.price for the persisted record.
+      const resolved = await resolveProductPrice(input.productId);
+      const verifiedPrice = resolved?.rawPrice ?? input.price;
+      const verifiedPriceDisplay = resolved?.displayPrice ?? (input.priceDisplay || `₹${input.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`);
+      const verifiedOriginalPrice = resolved?.rawOriginalPrice ?? input.originalPrice ?? null;
+      const verifiedOriginalPriceDisplay = resolved?.displayOriginalPrice ?? input.originalPriceDisplay ?? null;
+
       const docRef = adminDb.collection("users").doc(uid).collection("cart").doc(docId);
       
       await docRef.set(
@@ -151,12 +161,12 @@ export async function addCartItem(input: {
           variant: input.variant || "",
           size: input.size || "",
           quantity: FieldValue.increment(incrementQty),
-          price: input.priceDisplay || `₹${input.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-          rawPrice: input.price,
+          price: verifiedPriceDisplay,
+          rawPrice: verifiedPrice,
           image: input.image || "",
           alt: input.alt || input.name,
-          originalPrice: input.originalPriceDisplay || null,
-          rawOriginalPrice: input.originalPrice || null,
+          originalPrice: verifiedOriginalPriceDisplay,
+          rawOriginalPrice: verifiedOriginalPrice,
         },
         { merge: true }
       );

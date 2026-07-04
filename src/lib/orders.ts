@@ -114,6 +114,32 @@ export async function fulfillOrder(
 
   const pending = pendingDoc.data() as PendingOrderData;
 
+  // ── Amount Cross-Validation ───────────────────────────────────────────
+  // Security: Verify that the amount actually captured by Razorpay matches
+  // the amount we expected in the pending order.
+  try {
+    const { getRazorpay } = await import("@/lib/razorpay");
+    const rzp = getRazorpay();
+    const payment = await rzp.payments.fetch(razorpayPaymentId);
+    
+    // Amount in Razorpay is returned in paise (or subunits of currency)
+    // and must strictly match the pending order amount.
+    if (Number(payment.amount) !== pending.amount) {
+      const errorMsg = `Amount mismatch: expected ${pending.amount}, got ${payment.amount}`;
+      console.error("Fulfillment rejected:", errorMsg);
+      captureTelemetryError(new Error(errorMsg), "orders_fulfillment_amount_mismatch", {
+        razorpayOrderId,
+        razorpayPaymentId,
+        expected: pending.amount,
+        received: payment.amount
+      });
+      return { success: false, error: "Payment amount does not match order amount" };
+    }
+  } catch (error) {
+    console.error("Failed to fetch Razorpay payment details:", error);
+    return { success: false, error: "Unable to verify payment details" };
+  }
+
   // ── Resolve Address ───────────────────────────────────────────────────
   const address = await getUserAddressById(pending.uid, pending.addressId);
 
@@ -158,20 +184,23 @@ export async function fulfillOrder(
   // 2. Deduct inventory from `products` and `productDetails` (if docs exist)
   for (const item of pending.items) {
     const targetProductId = item.productId || item.id.replace(/-[^-]+$/, "");
+    
+    // Process products collection
     const productRef = adminDb.collection("products").doc(targetProductId);
     const productDoc = await productRef.get();
     if (productDoc.exists) {
-      batch.update(productRef, {
-        quantity: admin.firestore.FieldValue.increment(-item.quantity),
-      });
+      const currentQty = (productDoc.data()?.quantity as number) || 0;
+      const newQty = Math.max(0, currentQty - item.quantity);
+      batch.update(productRef, { quantity: newQty });
     }
 
+    // Process productDetails collection
     const detailRef = adminDb.collection("productDetails").doc(targetProductId);
     const detailDoc = await detailRef.get();
     if (detailDoc.exists) {
-      batch.update(detailRef, {
-        quantity: admin.firestore.FieldValue.increment(-item.quantity),
-      });
+      const currentQty = (detailDoc.data()?.quantity as number) || 0;
+      const newQty = Math.max(0, currentQty - item.quantity);
+      batch.update(detailRef, { quantity: newQty });
     }
   }
 

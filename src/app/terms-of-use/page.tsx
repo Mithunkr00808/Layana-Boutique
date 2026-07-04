@@ -6,6 +6,9 @@ import remarkGfm from "remark-gfm";
 export const metadata: Metadata = {
   title: "Terms of Use | Layana Boutique",
   description: "Read the Terms of Use and User Agreement for Layana Boutique (Panchali Vastra).",
+  alternates: {
+    canonical: "/terms-of-use",
+  },
 };
 
 export default async function TermsOfUsePage() {

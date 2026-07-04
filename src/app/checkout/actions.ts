@@ -9,6 +9,7 @@ import { getUserAddressById } from "@/lib/addresses";
 import { getRazorpay } from "@/lib/razorpay";
 import { fulfillOrder } from "@/lib/orders";
 import { addTelemetryBreadcrumb, captureTelemetryError } from "@/lib/telemetry";
+import { parsePriceToNumber, resolveProductPrice, formatINR } from "@/lib/priceUtils";
 import type { CartItem } from "@/lib/data";
 
 type OrderResponse =
@@ -34,15 +35,7 @@ const verifyPaymentInputSchema = z.object({
   addressId: z.string().trim().min(1).max(128),
 });
 
-function parsePriceToNumber(price: unknown): number {
-  if (typeof price === "number") return price;
-  if (typeof price === "string") {
-    const numeric = price.replace(/[^0-9.]/g, "");
-    const value = parseFloat(numeric);
-    return Number.isNaN(value) ? 0 : value;
-  }
-  return 0;
-}
+// parsePriceToNumber is imported from @/lib/priceUtils
 
 function resolveCartProductId(
   data: Partial<CartItem> & { productId?: string },
@@ -86,22 +79,8 @@ async function getAvailableStock(productId: string): Promise<number> {
 }
 
 async function getVerifiedPrice(productId: string): Promise<number> {
-  const productDoc = await adminDb.collection("products").doc(productId).get();
-  if (productDoc.exists) {
-    const data = productDoc.data();
-    // Prioritize discountPrice if available, then fall back to price/rawPrice
-    const price = parsePriceToNumber(data?.discountPrice || data?.rawPrice || data?.price);
-    if (price > 0) return price;
-  }
-
-  const detailDoc = await adminDb.collection("productDetails").doc(productId).get();
-  if (detailDoc.exists) {
-    const data = detailDoc.data();
-    const price = parsePriceToNumber(data?.discountPrice || data?.rawPrice || data?.price);
-    if (price > 0) return price;
-  }
-
-  return 0;
+  const resolved = await resolveProductPrice(productId);
+  return resolved?.rawPrice ?? 0;
 }
 
 async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtotal: number }> {
@@ -133,7 +112,7 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
         variant: data.variant ?? "",
         size: data.size ?? "",
         quantity: Math.min(quantity, stock), // Cap at available stock
-        price: `₹${finalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+        price: formatINR(finalPrice),
         rawPrice: finalPrice,
         image: data.image ?? "",
         alt: data.alt ?? "",
@@ -183,6 +162,33 @@ export async function createOrder(
     const address = await getUserAddressById(uid, input.addressId);
     if (!address) {
       return { error: "Delivery address not found. Please select a valid address." };
+    }
+
+    // Housekeeping: clean up stale pending orders for this user.
+    // These are created when a user starts checkout but abandons the Razorpay popup.
+    // Without cleanup, the pendingOrders collection grows indefinitely.
+    try {
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const allPending = await adminDb
+        .collection("pendingOrders")
+        .where("uid", "==", uid)
+        .limit(20) // avoid fetching too many
+        .get();
+
+      // Perform the time filter in memory to avoid requiring a composite index on [uid, createdAt]
+      const staleDocs = allPending.docs.filter((doc) => {
+        const data = doc.data();
+        return data.createdAt && data.createdAt < thirtyMinAgo;
+      });
+
+      if (staleDocs.length > 0) {
+        const cleanupBatch = adminDb.batch();
+        staleDocs.forEach((doc) => cleanupBatch.delete(doc.ref));
+        await cleanupBatch.commit();
+      }
+    } catch (cleanupError) {
+      // Non-critical — log and continue with order creation
+      console.warn("Stale pending order cleanup failed (non-critical):", cleanupError);
     }
 
     const shippingCost = SHIPPING_COSTS[input.shippingMethod] ?? 0;
