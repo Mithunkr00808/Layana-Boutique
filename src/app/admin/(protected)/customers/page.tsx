@@ -21,7 +21,7 @@ type CustomerOrder = {
 
 export default async function AdminCustomersPage() {
   let customers: CustomerRecord[] = [];
-  let customerOrders: Record<string, CustomerOrder[]> = {};
+  const customerOrders: Record<string, CustomerOrder[]> = {};
 
   if (process.env.FIREBASE_PROJECT_ID) {
     // Fetch subset of customers to prevent payload freezing

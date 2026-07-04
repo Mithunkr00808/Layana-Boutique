@@ -11,6 +11,7 @@ import type { WishlistItem } from "@/app/account/actions";
 import { addCartItem } from "@/app/cart/actions";
 import { Info } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function WishlistPage() {
   const { user, loading } = useAuth();
@@ -118,12 +119,12 @@ export default function WishlistPage() {
                 <p className="text-sm text-zinc-500 mb-6">
                   Save products to curate your look. They will appear here.
                 </p>
-                <a
+                <Link
                   href="/collections/sarees"
                   className="inline-flex px-6 py-3 bg-blue-900 text-white rounded-full text-xs tracking-[0.2em] uppercase hover:opacity-90 transition"
                 >
                   Browse collection
-                </a>
+                </Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-y-16 gap-x-10">
@@ -189,12 +190,12 @@ export default function WishlistPage() {
                   <p className="text-sm text-zinc-500 max-w-xs mb-6">
                     Discover pieces curated based on your recently saved aesthetic.
                   </p>
-                  <a
+                  <Link
                     href="/collections/sarees"
                     className="px-8 py-3 bg-blue-900 text-white text-[11px] font-sans uppercase tracking-widest rounded-lg hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10"
                   >
                     Explore Recommendations
-                  </a>
+                  </Link>
                 </div>
               </div>
             )}

@@ -15,9 +15,7 @@ import {
 } from "lucide-react";
 import { deleteCatalogItem, saveCatalogItem } from "@/app/admin/actions";
 import {
-  DEFAULT_PRODUCT_CATEGORY,
   PRODUCT_CATEGORY_OPTIONS,
-  isKnownProductCategory,
 } from "@/lib/catalog/categories";
 import { getCloudinarySignature } from "@/app/admin/cloudinary-actions";
 import type { ProductMedia } from "@/types/product-media";
@@ -402,9 +400,9 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
       const updated = { ...eagerUploadResultsRef.current, [clientKey]: result };
       eagerUploadResultsRef.current = updated;
       setEagerUploadResults(updated);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Eager upload error:", err);
-      setError(`Failed to upload "${file.name}": ${err.message}`);
+      setError(`Failed to upload "${file.name}": ${err instanceof Error ? err.message : String(err)}`);
       // Remove progress on failure to allow retry if selection is re-made
       setUploadProgress((prev) => {
         const next = { ...prev };

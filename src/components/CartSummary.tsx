@@ -11,6 +11,7 @@ export default function CartSummary({ items: serverItems }: { items: CartItemTyp
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true);
   }, []);
 

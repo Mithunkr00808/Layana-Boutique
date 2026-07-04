@@ -25,7 +25,7 @@ export default function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
         // Successful - close modal and let Next.js handle the server-side revalidation
         setShowModal(false);
       }
-    } catch (error) {
+    } catch {
       setErrorMsg("An unexpected error occurred. Please try again.");
       setIsCancelling(false);
     }

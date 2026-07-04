@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { db } from '@/lib/firebase/config';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 export function useWishlist() {
   const { user } = useAuth();

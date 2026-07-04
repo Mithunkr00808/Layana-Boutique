@@ -78,7 +78,7 @@ export default function AddressesPage() {
       }
     }
     fetchAddresses();
-  }, [user]);
+  }, [user, reset]);
 
   const onSubmit = async (data: AddressFormValues) => {
     if (!user) return;

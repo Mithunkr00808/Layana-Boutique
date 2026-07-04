@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   User as UserIcon,
@@ -30,9 +29,9 @@ interface Props {
 const baseLink =
   "flex items-center gap-3 uppercase tracking-[0.2em] text-xs transition-colors";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function AccountSidebar({ active, email }: Props) {
   const { logout } = useAuth();
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const linkClass = (key: ActiveItem) =>

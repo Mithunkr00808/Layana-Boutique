@@ -9,7 +9,7 @@ import { getUserAddressById } from "@/lib/addresses";
 import { getRazorpay } from "@/lib/razorpay";
 import { fulfillOrder } from "@/lib/orders";
 import { addTelemetryBreadcrumb, captureTelemetryError } from "@/lib/telemetry";
-import { parsePriceToNumber, resolveProductPrice, formatINR } from "@/lib/priceUtils";
+import { resolveProductPrice, formatINR } from "@/lib/priceUtils";
 import type { CartItem } from "@/lib/data";
 
 type OrderResponse =

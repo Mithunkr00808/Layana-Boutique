@@ -3,15 +3,13 @@ import type { NextRequest } from 'next/server';
 
 // Protected routes require authentication
 const protectedRoutes = ['/account', '/checkout'];
-// Auth routes shouldn't be accessible by already authenticated users
-const authRoutes = ['/login', '/signup', '/forgot-password'];
+
 
 export function proxy(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
   const { pathname } = request.nextUrl;
 
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
   const isAdminLoginRoute = pathname === '/admin/login';
   const isAdminRoute = pathname.startsWith('/admin') && !isAdminLoginRoute;
 

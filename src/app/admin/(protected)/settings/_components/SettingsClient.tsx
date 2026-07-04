@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRef, useState, useTransition, useCallback } from 'react';
-import { ImageIcon, Mail, CheckCircle2, AlertCircle, Save, Upload, X, Trash2 } from 'lucide-react';
+import { ImageIcon, Mail, CheckCircle2, AlertCircle, Save, Upload, Trash2 } from 'lucide-react';
 import { FileText, Globe } from 'lucide-react';
 import { uploadHeroImageAction, saveSocialSettings, saveHeroImages, savePoliciesSettings, saveGeneralSettings } from '../actions';
 import type { SiteSettings, HeroImage } from '@/lib/siteSettings';
@@ -206,7 +206,7 @@ export default function SettingsClient({ settings }: { settings: SiteSettings })
               <div>
                 <label className="text-sm font-bold text-[#1b1c1c]">Make Site Live</label>
                 <p className="text-xs text-gray-500 mt-1">
-                  When enabled, the real homepage is visible to visitors. When disabled, visitors see a "Coming Soon" page.
+                  When enabled, the real homepage is visible to visitors. When disabled, visitors see a &quot;Coming Soon&quot; page.
                 </p>
               </div>
               <button

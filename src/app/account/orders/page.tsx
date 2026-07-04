@@ -2,7 +2,6 @@
 import Navbar from "@/components/Navbar";
 import AccountSidebar from "@/components/AccountSidebar";
 import { getUserOrders } from "@/lib/data";
-import { adminAuth } from "@/lib/firebase/admin";
 import { getSessionClaims } from "@/lib/auth/session-user";
 import Link from "next/link";
 import Image from "next/image";

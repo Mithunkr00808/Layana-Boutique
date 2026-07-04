@@ -2,9 +2,7 @@
 
 import { useMemo, useState, useTransition, useEffect } from "react";
 import { ChevronDown, Minus, Plus } from "lucide-react";
-import { addCartItem, getCartItemQuantity } from "@/app/cart/actions";
 import { formatProductCategory } from "@/lib/catalog/categories";
-import WishlistButton from "./WishlistButton";
 import { useCart } from "@/lib/contexts/CartContext";
 
 interface SizeProps {
@@ -49,9 +47,9 @@ export default function ProductDetails(props: ProductDetailsProps) {
   // Whether the item exists in the cart
   const [cartSynced, setCartSynced] = useState(cartQty > 0);
 
-  // Sync localQty with cartQty when cartQty changes from the context
   useEffect(() => {
     if (cartQty > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalQty(cartQty);
       setCartSynced(true);
     } else {
@@ -113,7 +111,7 @@ export default function ProductDetails(props: ProductDetailsProps) {
           }
         }
         setTimeout(() => setMessage(""), 2000);
-      } catch (err) {
+      } catch {
         setMessage("Could not update bag. Please try again.");
       }
     });

@@ -46,8 +46,10 @@ export async function cancelUserOrder(
         // Issue a full refund by omitting the amount parameter.
         // This ensures we refund the exact captured amount, avoiding
         // mismatches from partial captures or Razorpay-side offers.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const refundResponse = await (rzp.payments.refund as any)(paymentId, {});
         refundId = refundResponse.id;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (rzpError: any) {
         console.error("Razorpay refund failed:", rzpError);
         captureTelemetryError(rzpError, "razorpay_refund_failed", { orderId, paymentId });

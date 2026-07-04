@@ -8,7 +8,6 @@ import {
   purgeExpiredRateLimitBuckets,
   rateLimitResponse,
 } from "@/lib/security/rate-limit";
-import { resolveProductPrice } from "@/lib/priceUtils";
 
 type GuestCartItem = {
   id: string;

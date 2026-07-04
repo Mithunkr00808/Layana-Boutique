@@ -30,12 +30,7 @@ type CategoryCollectionPageProps = {
 
 const BASE_URL = getSiteUrl();
 
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "name-asc", label: "Name: A to Z" },
-] as const;
+
 
 function parsePrice(price: string): number {
   const num = parseFloat((price || "0").replace(/[^0-9.]/g, ""));
@@ -145,7 +140,7 @@ export default async function CollectionPage({ params, searchParams }: CategoryC
       )
     : rawProducts;
   const products = sortProducts(filteredProducts, activeSort);
-  const currentYear = new Date().getFullYear();
+
 
   const availableSubCategories = Array.from(
     new Set(rawProducts.flatMap((p) => p.subCategories || []))

@@ -23,7 +23,6 @@ googleProvider.addScope("profile");
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 export default function GoogleSignInButton({
-  redirectTo,
   onSuccess,
   onError,
   label = "signin",
@@ -88,7 +87,7 @@ export default function GoogleSignInButton({
           try {
             await signInWithRedirect(auth, googleProvider);
             return;
-          } catch (redirectErr) {
+          } catch {
             message = "Pop-up was blocked and redirect failed. Please allow pop-ups for this site.";
           }
           break;

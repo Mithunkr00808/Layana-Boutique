@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import { getOrderById } from "@/lib/data";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -132,18 +133,18 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
             </div>
 
             <div className="flex gap-3">
-              <a
+              <Link
                 href="/collections/sarees"
                 className="px-5 py-3 border border-[var(--color-outline-variant)]/40 rounded-full text-sm font-sans tracking-[0.15em] uppercase text-[var(--color-on-surface)] hover:bg-[var(--color-surface-container-low)] transition-colors"
               >
                 Continue Shopping
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/account"
                 className="px-5 py-3 bg-[var(--color-primary)] text-white rounded-full text-sm font-sans tracking-[0.15em] uppercase hover:opacity-90 transition-opacity"
               >
                 View Orders
-              </a>
+              </Link>
             </div>
           </section>
         </div>

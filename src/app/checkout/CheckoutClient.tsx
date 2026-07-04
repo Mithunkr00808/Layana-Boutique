@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { createOrder, verifyPayment } from "./actions";
@@ -59,15 +59,6 @@ export default function CheckoutClient({ items, addresses, subtotal }: Props) {
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
-
-  const totalDisplay = useMemo(
-    () =>
-      `₹${subtotal.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`,
-    [subtotal]
-  );
 
   const setFailed = (message: string) => {
     setPaymentState("failed");

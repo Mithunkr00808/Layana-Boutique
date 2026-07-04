@@ -61,7 +61,7 @@ export const OrderConfirmationEmail = ({
             </Heading>
 
             <Text className="text-black text-[14px] leading-[24px]">
-              We've received your order and are currently processing it. We will notify you again once your items have shipped.
+              We&apos;ve received your order and are currently processing it. We will notify you again once your items have shipped.
             </Text>
 
             <Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />

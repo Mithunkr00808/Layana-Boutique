@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Metadata } from "next";
 import { getSiteSettings } from "@/lib/siteSettings";
 import ReactMarkdown from "react-markdown";

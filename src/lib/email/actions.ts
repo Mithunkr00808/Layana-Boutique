@@ -46,7 +46,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
       react: OrderConfirmationEmail({
         orderId,
         customerName,
-        items: order.items.map((item: any) => ({
+        items: order.items.map((item: { name: string, quantity: number, rawPrice?: number, size?: string, image?: string }) => ({
           name: item.name,
           quantity: item.quantity,
           price: formatter.format(item.rawPrice || 0),
@@ -114,7 +114,7 @@ export async function sendOrderStatusEmail(orderId: string, status: string) {
         orderId,
         customerName,
         status,
-        items: order.items.map((item: any) => ({
+        items: order.items.map((item: { name: string, quantity: number, rawPrice?: number, size?: string, image?: string }) => ({
           name: item.name,
           quantity: item.quantity,
           price: formatter.format(item.rawPrice || 0),
