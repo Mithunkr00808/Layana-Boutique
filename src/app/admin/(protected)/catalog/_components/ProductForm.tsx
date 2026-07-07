@@ -72,6 +72,7 @@ type InitialData = {
   price?: string;
   hasSizes?: boolean;
   subCategories?: string[];
+  sizeQuantities?: Record<string, number>;
 };
 
 type ExistingFormMedia = ProductMedia & {
