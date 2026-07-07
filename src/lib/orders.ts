@@ -158,20 +158,32 @@ export async function fulfillOrder(
   // 2. Deduct inventory from `products` and `productDetails` (if docs exist)
   for (const item of pending.items) {
     const targetProductId = item.productId || item.id.replace(/-[^-]+$/, "");
+    const isSizedItem = item.size && item.size !== "onesize" && item.size !== "";
+
     const productRef = adminDb.collection("products").doc(targetProductId);
     const productDoc = await productRef.get();
     if (productDoc.exists) {
-      batch.update(productRef, {
+      const data = productDoc.data();
+      const updates: Record<string, any> = {
         quantity: admin.firestore.FieldValue.increment(-item.quantity),
-      });
+      };
+      if (isSizedItem && data?.sizeQuantities && typeof data.sizeQuantities[item.size] === "number") {
+        updates[`sizeQuantities.${item.size}`] = admin.firestore.FieldValue.increment(-item.quantity);
+      }
+      batch.update(productRef, updates);
     }
 
     const detailRef = adminDb.collection("productDetails").doc(targetProductId);
     const detailDoc = await detailRef.get();
     if (detailDoc.exists) {
-      batch.update(detailRef, {
+      const data = detailDoc.data();
+      const updates: Record<string, any> = {
         quantity: admin.firestore.FieldValue.increment(-item.quantity),
-      });
+      };
+      if (isSizedItem && data?.sizeQuantities && typeof data.sizeQuantities[item.size] === "number") {
+        updates[`sizeQuantities.${item.size}`] = admin.firestore.FieldValue.increment(-item.quantity);
+      }
+      batch.update(detailRef, updates);
     }
   }
 

@@ -56,6 +56,7 @@ export interface ProductDetail {
   sustainability: string;
   images: ProductMedia[];
   sizes: ProductSize[];
+  sizeQuantities?: Record<string, number>;
 }
 
 export interface CartItem {

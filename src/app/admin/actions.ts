@@ -287,6 +287,14 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     label: s.trim(),
     available: true,
   }));
+  const sizeQuantities: Record<string, number> = {};
+  sizes.forEach(size => {
+    if (size.label) {
+      const qtyStr = formData.get(`sizeQuantity_${size.label}`)?.toString();
+      sizeQuantities[size.label] = qtyStr ? parseInt(qtyStr, 10) : 1;
+    }
+  });
+
   const summaryImage = selectSummaryImage(orderedMedia);
   const summaryAlt = `${name || "Product"} cover image`;
   const enableSizesStr = formData.get("enableSizes");
@@ -309,6 +317,7 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     options: formData.get("options")?.toString() || "",
     hasVideo: orderedMedia.some((item) => item.resourceType === "video"),
     mediaCount: orderedMedia.length,
+    sizeQuantities: hasSizes ? sizeQuantities : {},
   };
 
   // Create the Product Detail (for individual page)
@@ -326,6 +335,7 @@ export async function saveCatalogItem(formData: FormData, existingId?: string) {
     images: orderedMedia,
     sizes,
     hasSizes,
+    sizeQuantities: hasSizes ? sizeQuantities : {},
     materials: formData.get("options")?.toString() || "",
   };
 

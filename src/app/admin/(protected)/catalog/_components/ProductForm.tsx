@@ -676,13 +676,28 @@ export default function ProductForm({ initialData }: { initialData?: InitialData
                     </button>
                   </div>
                   <input
-                    type="text"
+                    type="hidden"
                     name="sizes"
                     value={sizesValue}
-                    onChange={(event) => setSizesValue(event.target.value)}
-                    className="w-full border-0 border-b border-[var(--color-outline-variant)]/20 bg-transparent py-2 text-sm text-[var(--color-on-surface)] focus:border-[var(--color-primary)] focus:outline-none"
-                    placeholder="XS, S, M, L"
                   />
+                  {activeSizes.size > 0 && (
+                    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                      {Array.from(activeSizes).sort(sortSizes).map((size) => (
+                        <div key={`qty-${size}`} className="flex flex-col gap-1">
+                          <label className="text-[0.65rem] font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
+                            {size} Quantity
+                          </label>
+                          <input
+                            type="number"
+                            name={`sizeQuantity_${size}`}
+                            min="0"
+                            defaultValue={initialData?.sizeQuantities?.[size] ?? 1}
+                            className="w-full border-0 border-b border-[var(--color-outline-variant)]/20 bg-transparent py-2 text-sm text-[var(--color-on-surface)] focus:border-[var(--color-primary)] focus:outline-none"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

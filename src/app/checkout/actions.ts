@@ -67,20 +67,23 @@ function resolveCartProductId(
   return rawId.replace(/-(onesize|one-size|os)$/i, "");
 }
 
-async function getAvailableStock(productId: string): Promise<number> {
+async function getAvailableStock(productId: string, size?: string): Promise<number> {
   const [productDoc, detailDoc] = await Promise.all([
     adminDb.collection("products").doc(productId).get(),
     adminDb.collection("productDetails").doc(productId).get(),
   ]);
 
-  const productQty =
-    productDoc.exists && typeof productDoc.data()?.quantity === "number"
-      ? productDoc.data()!.quantity
-      : 0;
-  const detailQty =
-    detailDoc.exists && typeof detailDoc.data()?.quantity === "number"
-      ? detailDoc.data()!.quantity
-      : 0;
+  const getStockFromData = (doc: any) => {
+    if (!doc.exists) return 0;
+    const data = doc.data();
+    if (size && size !== "onesize" && data?.sizeQuantities && typeof data.sizeQuantities[size] === "number") {
+      return data.sizeQuantities[size];
+    }
+    return typeof data?.quantity === "number" ? data.quantity : 0;
+  };
+
+  const productQty = getStockFromData(productDoc);
+  const detailQty = getStockFromData(detailDoc);
 
   return Math.max(productQty, detailQty);
 }
@@ -119,7 +122,7 @@ async function getVerifiedCart(uid: string): Promise<{ items: CartItem[]; subtot
       if (verifiedPrice <= 0) return null;
 
       // Best-effort stock check
-      const stock = await getAvailableStock(productId);
+      const stock = await getAvailableStock(productId, data.size);
       const quantity = data.quantity ?? 1;
 
       // If stock is 0 but item is in cart, we filter it out to prevent purchase
