@@ -36,17 +36,17 @@ export default async function Home() {
 
           <FadeIn delay={0.5}>
             <h2 className="font-sans text-2xl md:text-3xl font-light text-[var(--color-on-surface)] mb-6">
-              Opening Soon
+              Under Maintenance
             </h2>
             <p className="max-w-md text-sm md:text-base text-[var(--color-secondary)] mx-auto leading-relaxed">
-              We are crafting something beautiful for you. Our curated collection of handpicked sarees, kurties, and kids wear will be available shortly.
+              We are currently performing some scheduled maintenance to improve your experience. Our full collection will be back online shortly.
             </p>
           </FadeIn>
           
           <FadeIn delay={0.7}>
             <div className="mt-12">
               <p className="text-xs uppercase tracking-widest text-[var(--color-secondary)] mb-4">
-                Stay tuned for our launch
+                Please check back soon
               </p>
               <div className="flex gap-4 justify-center">
                 <span className="h-2 w-2 rounded-full bg-[var(--color-primary-container)] animate-pulse"></span>
